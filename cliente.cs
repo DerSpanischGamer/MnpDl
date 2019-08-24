@@ -16,7 +16,7 @@ class cliente {
 	
 	// ACCION
 	private Carta dlBrk = new Carta("POS AHORA ES MIO", 5, tipo.ACCION);
-	private Carta slyDl = new Carta("VEN PA' CA", 3, tipo.ACCION);
+	private Carta slyDl = new Carta("VEN PA CA", 3, tipo.ACCION);
 	private Carta frcDl = new Carta("SWITCH", 3, tipo.ACCION);
 	private Carta brthd = new Carta("REGALO CUMPLE", 2, tipo.ACCION);
 	private Carta dbtCl = new Carta("PAGAME BITCH", 3, tipo.ACCION);
@@ -41,7 +41,7 @@ class cliente {
 	// REVISAR PRECIOS
 	// WILDS MEDIOS
 	
-	private Carta wldTt = new Carta("COMODIN CARD", 0, tipo.PROPIEDAD);
+	private Carta wldTt = new Carta("COMODIN CARD", 10, tipo.PROPIEDAD);
 	private Carta mdMAC = new Carta("COMODIN MARRON AZULCLARO", 2, tipo.PROPIEDAD);
 	private Carta mdNam = new Carta("COMODIN NARANJA MORADO", 2, tipo.PROPIEDAD);
 	private Carta mdAmR = new Carta("COMODIN AMARILLO ROJO", 2, tipo.PROPIEDAD);
@@ -64,7 +64,7 @@ class cliente {
 	// ----------------------------- XML -----------------------------
 	
 	Set[] sets = new Set[10];
-	Propiedad[] props = new Propiedad[28];
+	Propiedad[] props = new Propiedad[28]; // Todas las propiedades
 	
 	void cargarXML() {
 		XmlDocument doc = new XmlDocument();
@@ -84,11 +84,13 @@ class cliente {
 			string[] _precis = extraerInfoXML(cantidad, node.SelectSingleNode("precios").InnerText);
 			int[]    precios = new int[cantidad];
 		
+			bool   letra   = bool.Parse(node.SelectSingleNode("letra").InnerText);
+		
 			for (int i = 0; i < cantidad; i++) {
 				precios[i] = int.Parse(_precis[i]);
 				
-				Propiedad d = new Propiedad(nombres[i], precio, color, cantidad);
-				ps[i] = new Propiedad(nombres[i], precio, color, cantidad);
+				Propiedad d = new Propiedad(nombres[i], precio, color, cantidad, false, false, letra);
+				ps[i] = new Propiedad(nombres[i], precio, color, cantidad, false, false, letra);
 				
 				props[j] = ps[i];
 				j++;
@@ -130,10 +132,13 @@ class cliente {
 		public readonly int precio;
 		public readonly tipo clase;
 	
-		public Carta(string _texto = "NONE", int _precio = -1, tipo _clase = tipo.ACCION) {
+		public readonly bool letraNegra;
+	
+		public Carta(string _texto = "NONE", int _precio = -1, tipo _clase = tipo.ACCION, bool _letra = false) {
 			texto = _texto;
 			precio = _precio;
 			clase = _clase;
+			letraNegra = _letra;
 		}
 		
 		public override string ToString() { return texto; }
@@ -155,7 +160,9 @@ class cliente {
 		
 		public readonly int setNum; // numero de cartas en el set
 		
-		public Propiedad(string _nombre, int _precio, string _color, int _setN, bool _tot = false, bool _med = false) {
+		public readonly bool letra;
+		
+		public Propiedad(string _nombre, int _precio, string _color, int _setN, bool _tot = false, bool _med = false, bool _letra = false) {
 			nombre = _nombre;
 			precio = _precio;
 			
@@ -165,6 +172,7 @@ class cliente {
 			
 			wildTot = _tot;
 			wildMed = _med;
+			letra = _letra;
 		}
 		
 		public bool isNormalCart() { if (wildMed || wildTot) {return false; } return true; }
@@ -174,7 +182,12 @@ class cliente {
 			return nombre + " " + precio.ToString();
 		}
 	}
-
+	
+	Propiedad getPropiedad(string nombre) {
+		foreach (Propiedad p in props) { if (p.nombre == nombre) { return p; } }
+		return null;
+	}
+	
 	public class Set {
 		int max;
 		int currentProps = 0;
@@ -183,26 +196,26 @@ class cliente {
 		
 		construcciones cons = construcciones.NADA;
 		
-		public readonly Propiedad[] props;
+		public readonly Propiedad[] prop;
 	
 		public readonly int[] precios;
 	
 		public Set(Propiedad p) {   // Utilizado para guardar los sets que tiene el jugador
 			max = p.setNum;
-			props = new Propiedad[max];
+			prop = new Propiedad[max];
 			
 			precios = new int[max]; // ¡¡¡ hay que importar los precios
 		}
 		
 		public Set(Propiedad[] p, int[] _precios) { // Utilizado sobretodo para guardar todos los sets completos y utilizarlos como tabla de busqueda
 			max = p[0].setNum;
-			props = p;
+			prop = p;
 			
 			precios = _precios;
 		}
 		
 		public void addProp(Propiedad p) { // Añade una propiedad al set
-			props[currentProps] = p;
+			prop[currentProps] = p;
 			currentProps++;
 		}
 		
@@ -227,7 +240,7 @@ class cliente {
 		public override string ToString() {
 			string tmp = string.Empty;
 			
-			foreach (Propiedad p in props) {
+			foreach (Propiedad p in prop) {
 				tmp += " - " + p.nombre;
 			}
 			
@@ -310,7 +323,8 @@ class cliente {
 				if (estadoActual.ToString() != mensaje[1]) { estadoActual = getEstado(mensaje[1]); accionEstado(); }
 			break;
 			case "PEDIR":
-				for (int i = 0; i < int.Parse(mensaje[1]); i++) { addCarta(mensaje[2 + i]); }
+				for (int i = 0; i < int.Parse(mensaje[1]); i++) { addCarta(mensaje[2 + i]); Console.WriteLine(mensaje[2 + i]); }
+				dibujarPantalla();
 			break;
 			case "NOEXITO":
 				Console.WriteLine("Ha habido un error :/ (NOEXITO)");
@@ -342,7 +356,7 @@ class cliente {
 	
 	// Cartas del jugador (sean propiedades puestas en la mesa o cartas por jugar)
 	Set[] propiedades;
-	public Carta[] cartas = new Carta[12] { new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta() };
+	public Carta[] cartas = new Carta[12] { new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta("COMODIN MARRON AZULCLARO", 2, tipo.PROPIEDAD), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta() };
 	
 	int cartaSelect    = 0;
 	int cartas_jugadas = 0;
@@ -350,9 +364,11 @@ class cliente {
 	
 	void addCarta(string _c) {
 		Carta ca = new Carta();
-		foreach (Carta c in todas)  { if (c.texto == _c) ca = c; }
+		foreach (Carta c in todas)  { if (c.texto == _c) ca = c; } // Buscar la Carta
 		
-		for (int i = 0; i < cartas.Length; i++) { if (cartas[i].texto == "NONE") { cartas[i] = ca; break; } }
+		if (ca.texto == "NONE") { foreach (Propiedad p in props) { if (p.nombre == _c) ca = new Carta(_c, p.precio, tipo.PROPIEDAD, p.letra); } }
+		
+		for (int i = 0; i < cartas.Length; i++) { if (cartas[i].texto == "NONE") { cartas[i] = ca; break; } } // Añadir a la baraja
 	}
 	
 	public cliente() {
@@ -362,7 +378,7 @@ class cliente {
 		cargarXML();
 		iniciarCliente();
 		
-		string nametag = "ro";
+		string nametag = "ro"; // QUITAR
 		
 		Console.Clear();
 		while (nametag.Length == 0 || nametag.Length >= 10 || nametag.Contains(" ") || numeroPuntosComas(nametag) > 1) {
@@ -403,25 +419,56 @@ class cliente {
 				Console.WriteLine("Programar los turnos :P");
 				
 				// Primero pedir cartas
-				if (cartasUtiles == 0) enviarMensaje(prepararMensaje(new string[2] { "PEDIR", "5" }));
-				else enviarMensaje(prepararMensaje(new string[2] { "PEDIR", "2" }));
+				if (cartasUtiles == 0) { enviarMensaje(prepararMensaje(new string[2] { "PEDIR", "5" })); cartasUtiles += 5; }
+				else 				   { enviarMensaje(prepararMensaje(new string[2] { "PEDIR", "2" })); cartasUtiles += 2; }
 				
+				while (turno) {
+					var tecla = Console.ReadKey().Key;
+					
+					if      (tecla == ConsoleKey.RightArrow) { cartaSelect++; cartaSelect %= cartasUtiles; dibujarPantalla(); }
+					else if (tecla == ConsoleKey.LeftArrow)  { cartaSelect--; cartaSelect %= cartasUtiles; dibujarPantalla(); }
+					else if (tecla == ConsoleKey.Enter)      { action(cartas[cartaSelect]); }
+				}
 				
-				var tecla = Console.ReadKey().Key;
-				Console.WriteLine(tecla.ToString());
-				
-				if      (tecla == ConsoleKey.RightArrow) { cartaSelect++; cartaSelect %= cartasUtiles; dibujarPantalla(); }
-				else if (tecla == ConsoleKey.LeftArrow)  { cartaSelect--; cartaSelect %= cartasUtiles; dibujarPantalla(); }
-				else if (tecla == ConsoleKey.Enter)        action(cartas[cartaSelect]);
+				// Enviar que se ha acabado el turno
 			break;
 		}
 	}
 	
 	void action(Carta c) { // !!!!!!!!!!!!!!!!! POR HACER, QUE OCURRE CUANDO EL JUGADOR JUEGA UNA CARTA
+		Console.WriteLine("Programar acciones");
 		switch (c.clase) {
 			case tipo.PROPIEDAD:
+				if (c.texto.Contains("COMODIN")) {
+					if (contarEspacios(c.texto) == 1) { // Significa COMODIN CARD que puede ser cualquiera
+						
+					} else { // Comodin a elegir entre dos colores
+						
+					}
+				} else {
+					Propiedad p = getPropiedad(c.texto);
+				}
+			break;
+			case tipo.DINERO:
+				
+			break;
+			case tipo.ACCION:
+			break;
+			case tipo.CONSTRUCCION:
+			break;
+			case tipo.RENTA:
 			break;
 		}
+		
+		if (cartas_jugadas == 3) { turno = false; }
+	}
+	
+	int contarEspacios(string s) {
+		int a = 0;
+		for (int i = 0; i < s.Length; i++) {
+			if (s[i] == ' ') { a++; }
+		}
+		return a;
 	}
 	
 	// ----------------------------- PARTE GRÁFICA -----------------------------
@@ -429,8 +476,13 @@ class cliente {
 	string[] dibBarja = new string[9];
 	string   dibSelec = string.Empty;
 	
+	Carta    cartaMedio = new Carta("QUE EMPIECE LA PARTIDA", 10, tipo.ACCION);
+	string[] cartaMd = new string[9];
+	string   txtHost = string.Empty;
+	
 	void resetearProps() { for (int i = 0; i < dibProps.Length; i++) { dibProps[i] = string.Empty; } }
 	void resetearBarja() { dibSelec = string.Empty; for (int i = 0; i < dibBarja.Length; i++) { dibBarja[i] = string.Empty; } }
+	void resetearCrtMd() { txtHost = string.Empty;  for (int i = 0; i < cartaMd.Length ; i++) { cartaMd[i]  = string.Empty; } }
 
 	void dibujarPantalla() {
 		resetearProps();
@@ -513,10 +565,8 @@ class cliente {
 				
 				continue;
 			}
-			
 			temp += letra;
 		}
-		
 		tmp[cnt] = temp;
 		
 		return tmp;
@@ -541,154 +591,163 @@ class cliente {
 	
 	string getColor(string nombre) {
 		foreach (Set s in sets) {
-			foreach(Propiedad p in s.props) {
+			foreach(Propiedad p in s.prop) {
 				if (p.nombre == nombre) return p.color;
 			}
 		}
-		
 		return null;
 	}
 	
 	
 	int[] getPrecios(string color) {
-		foreach (Set s in sets) { if (s.props[0].color == color) { return s.precios; } }
+		foreach (Set s in sets) { if (s.prop[0].color == color) { return s.precios; } }
 		
 		return null;
 	}
 	
 	void wildCart(string[] palabras) {  // Se encarga de dibujar los comodines en las cartas en la mano
 		if (palabras[1] == "CARD") {
-			dibBarja[2] += "  ";
+			dibCarta[2] += "  ";
 			foreach (var c in colores) {
-				dibBarja[2] += "$" + c.Key + "# ";
+				dibCarta[2] += "$" + c.Key + "# ";
 			}
-			dibBarja[2] += "$NEGRO# ";
+			dibCarta[2] += "$NEGRO# ";
 			
-			dibBarja[4] += centrarTexto("COMODIN", 15);
+			dibCarta[4] += centrarTexto("COMODIN", 15);
 			
 			for (int i = 0; i < 8; i++) {
 				if (i == 2 || i == 4) continue;
-				dibBarja[i] += centrarTexto(string.Empty, 15);
+				dibCarta[i] += centrarTexto(string.Empty, 15);
 			}
 			
-			for (int i = 1; i < 8; i++) { dibBarja[i] += "#"; }
+			for (int i = 1; i < 8; i++) { dibCarta[i] += "#"; }
 			return;
 		}
 		
-		dibBarja[1] += "   $" + palabras[1] + "#" + centrarTexto("COMODIN", 9) + "$" + "NEGRO" + "#   ";
-		for (int i = 2; i < 7; i++) { if (i == 4) { continue; } dibBarja[i] += centrarTexto(string.Empty, 15); }
-		dibBarja[4] += centrarTexto("ELIGE COLOR", 15);
-		dibBarja[7] += "   $" + palabras[2] + "#" + centrarTexto("COMODIN", 9) + "$" + "NEGRO" + "#   ";
+		dibCarta[1] += "   $" + palabras[1] + "#" + centrarTexto("COMODIN", 9) + "$" + "NEGRO" + "#   ";
+		for (int i = 2; i < 7; i++) { if (i == 4) { continue; } dibCarta[i] += centrarTexto(string.Empty, 15); }
+		dibCarta[4] += centrarTexto("ELIGE COLOR", 15);
+		dibCarta[7] += "   $" + palabras[2] + "#" + centrarTexto("COMODIN", 9) + "$" + "NEGRO" + "#   ";
 		
-		for (int i = 1; i < 8; i++) { dibBarja[i] += "#"; }
+		for (int i = 1; i < 8; i++) { dibCarta[i] += "#"; }
 	}
 	
 	void cualquier() { // Se encarga de dibujar la renta multicolor
-		dibBarja[2] += "  ";
+		dibCarta[2] += "  ";
 			foreach (var c in colores) {
-				dibBarja[2] += "$" + c.Key + "# ";
+				dibCarta[2] += "$" + c.Key + "# ";
 			}
-			dibBarja[2] += "$NEGRO# ";
+			dibCarta[2] += "$NEGRO# ";
 			
-			dibBarja[4] += centrarTexto("RENTA", 15);
+			dibCarta[4] += centrarTexto("RENTA", 15);
 			
 			for (int i = 0; i < 8; i++) {
 				if (i == 2 || i == 4) continue;
-				dibBarja[i] += centrarTexto(string.Empty, 15);
+				dibCarta[i] += centrarTexto(string.Empty, 15);
 			}
 			
-			for (int i = 1; i < 8; i++) { dibBarja[i] += "#"; }
+			for (int i = 1; i < 8; i++) { dibCarta[i] += "#"; }
 			return;
 	}
 	
 	void dibujarBarja() {
 		foreach (Carta c in cartas) {
-			if (c.precio == -1) continue;
-			
-			dibBarja[0] += " " + c.precio.ToString() + "-#############-" + c.precio.ToString();
-			dibBarja[8] += " " + c.precio.ToString() + "-#############-" + c.precio.ToString();
-			
-			for (int i = 1; i < 8; i++) {
-			
-				dibBarja[i] += " #";
-			}
-			
-			string[] palabras = separarPalabras(c.texto);
-			
-			switch (c.clase) {
-				case tipo.ACCION:
-					for (int i = 1; i < 3; i++) {dibBarja[i] += centrarTexto(string.Empty, 15); }
-					for (int i = 0; i < palabras.Length; i++) { dibBarja[i + 3] += centrarTexto(palabras[i], 15); }
-					for (int i = palabras.Length; i < 5; i++) { dibBarja[i + 3] += centrarTexto(string.Empty, 15); }
-					for (int i = 1; i < 8; i++) { dibBarja[i] += "#"; }
-					
-				break;
-				case tipo.DINERO:
-					goto case tipo.ACCION;
-				case tipo.PROPIEDAD:
-					if (c.texto.Contains("COMODIN")) { wildCart(palabras); break; }
-				
-					dibBarja[2] = dibBarja[2].Substring(0, dibBarja[2].Length - 2);
-					
-					dibBarja[2] += " ·-#############-·";
-					
-					string clr = getColor(c.texto);
-					
-					dibBarja[1] += "$" + clr + "#"; // Aplicar el color de fondo
-					dibBarja[1] += centrarTexto(c.texto, 15);
-					dibBarja[1] += "$" + "NEGRO" + "#";
-					
-					
-					int[] prix = getPrecios(clr);
-					
-					for (int i = 0; i < prix.Length; i++) {
-						dibBarja[i + 3] += centrarTexto(string.Empty, 7) + (i + 1).ToString() + " --- " + prix[i].ToString() + " ";
-					}
-					
-					for (int i = prix.Length; i < 5; i++) {
-						dibBarja[i + 3] += centrarTexto(string.Empty, 15);
-					}
-					for (int i = 1; i < 8; i++) { if (i == 2) { continue; } dibBarja[i] += "#"; }
-					
-				break;
-				case tipo.RENTA:
-					if (c.texto.Contains("CUALQUIER")) { cualquier(); break; } // TODO: HACER LA RENTA MULTICOLOR
-					
-					dibBarja[1] += centrarTexto(string.Empty, 15);
-					dibBarja[2] += centrarTexto("RENTA", 15);
-					dibBarja[3] += centrarTexto(string.Empty, 15);
-					dibBarja[4] += "   $" + palabras[1] + "#" + centrarTexto(string.Empty, 9) + "$" + "NEGRO" + "#   ";
-					dibBarja[5] += centrarTexto(string.Empty, 15);
-					dibBarja[6] += "   $" + palabras[2] + "#" + centrarTexto(string.Empty, 9) + "$" + "NEGRO" + "#   ";
-					dibBarja[7] += centrarTexto(string.Empty, 15);
-					for (int i = 1; i < 8; i++) { dibBarja[i] += "#"; }
-				
-				break;
-				case tipo.CONSTRUCCION:
-					dibBarja[1] += centrarTexto(string.Empty, 15);
-					dibBarja[2] += centrarTexto(c.texto, 15);
-					dibBarja[3] += centrarTexto(string.Empty, 15);
-				
-					switch (c.texto) {
-						case "CASA":
-							dibBarja[4] += "$VERDE]" + centrarTexto("▓", 15) + "$BLANCO]";
-							dibBarja[5] += "$VERDE]" + centrarTexto("▓▓▓", 15) + "$BLANCO]";
-							dibBarja[6] += "$VERDE]" + centrarTexto("▓▓▓▓▓", 15) + "$BLANCO]";
-							dibBarja[7] += "$VERDE]" + centrarTexto("▓ ▓", 15) + "$BLANCO]";
-						break;
-						default:
-							dibBarja[4] += "$ROJO]" + centrarTexto("▓▓▓▓▓", 15) + "$BLANCO]";
-							dibBarja[5] += "$ROJO]" + centrarTexto("▓ ▓ ▓", 15) + "$BLANCO]";
-							dibBarja[6] += "$ROJO]" + centrarTexto("▓▓▓▓▓", 15) + "$BLANCO]";
-							dibBarja[7] += "$ROJO]" + centrarTexto("▓▓ ▓▓", 15) + "$BLANCO]";
-						
-						break;
-					}
-					
-					for (int i = 1; i < 8; i++) { dibBarja[i] += "#"; }
-				break;
-			}
+			int i = 0;
+			foreach (string s in dibujarCarta(c)) {	dibBarja[i] += s; i++;}
 		}
+	}
+	
+	string[] dibCarta;
+	string[] dibujarCarta(Carta c) {
+		if (c.precio == -1) return new string[9];
+		dibCarta = new string[9];
+		
+		if (c.precio < 10) {  dibCarta[0] += " " + c.precio.ToString() + "-#############-" + c.precio.ToString(); dibCarta[8] += " " + c.precio.ToString() + "-#############-" + c.precio.ToString(); }
+		else               { dibCarta[0] += " " + c.precio.ToString() + "-###########-" + c.precio.ToString();   dibCarta[8] += " " + c.precio.ToString() + "-###########-" + c.precio.ToString(); }
+		
+		for (int i = 1; i < 8; i++) {		
+			dibCarta[i] += " #";
+		}
+		
+		string[] palabras = separarPalabras(c.texto);
+		
+		switch (c.clase) {
+			case tipo.ACCION:
+				for (int i = 1; i < 3; i++) {dibCarta[i] += centrarTexto(string.Empty, 15); }
+				for (int i = 0; i < palabras.Length; i++) { dibCarta[i + 3] += centrarTexto(palabras[i], 15); }
+				for (int i = palabras.Length; i < 5; i++) { dibCarta[i + 3] += centrarTexto(string.Empty, 15); }
+				for (int i = 1; i < 8; i++) { dibCarta[i] += "#"; }
+				
+			break;
+			case tipo.DINERO:
+				goto case tipo.ACCION;
+			case tipo.PROPIEDAD:
+				if (c.texto.Contains("COMODIN")) { wildCart(palabras); break; }
+			
+				dibCarta[2] = dibCarta[2].Substring(0, dibCarta[2].Length - 2);
+				dibCarta[2] += " ·-#############-·";
+				
+				string clr = getColor(c.texto);
+				
+				dibCarta[1] += "$" + clr + "#"; // Aplicar el color de fondo
+				if (c.letraNegra) dibCarta[1] += "$NEGRO]"; // Aplicar el color a las letras (si es necesario)
+				
+				dibCarta[1] += centrarTexto(c.texto, 15);
+				
+				dibCarta[1] += "$NEGRO#";
+				dibCarta[1] += "$BLANCO]"; // Quitar el color a las letras (si es necesario)
+				
+				int[] prix = getPrecios(clr);
+				
+				for (int i = 0; i < prix.Length; i++) {
+					dibCarta[i + 3] += centrarTexto(string.Empty, 7) + (i + 1).ToString() + " --- " + prix[i].ToString() + " ";
+				}
+				
+				for (int i = prix.Length; i < 5; i++) {
+					dibCarta[i + 3] += centrarTexto(string.Empty, 15);
+				}
+				for (int i = 1; i < 8; i++) { if (i == 2) { continue; } dibCarta[i] += "#"; }
+				
+			break;
+			case tipo.RENTA:
+				if (c.texto.Contains("CUALQUIER")) { cualquier(); break; } // TODO: HACER LA RENTA MULTICOLOR
+				
+				dibCarta[1] += centrarTexto(string.Empty, 15);
+				dibCarta[2] += centrarTexto("RENTA", 15);
+				dibCarta[3] += centrarTexto(string.Empty, 15);
+				dibCarta[4] += "   $" + palabras[1] + "#" + centrarTexto(string.Empty, 9) + "$" + "NEGRO" + "#   ";
+				dibCarta[5] += centrarTexto(string.Empty, 15);
+				dibCarta[6] += "   $" + palabras[2] + "#" + centrarTexto(string.Empty, 9) + "$" + "NEGRO" + "#   ";
+				dibCarta[7] += centrarTexto(string.Empty, 15);
+				for (int i = 1; i < 8; i++) { dibCarta[i] += "#"; }
+			
+			break;
+			case tipo.CONSTRUCCION:
+				dibCarta[1] += centrarTexto(string.Empty, 15);
+				dibCarta[2] += centrarTexto(c.texto, 15);
+				dibCarta[3] += centrarTexto(string.Empty, 15);
+			
+				switch (c.texto) {
+					case "CASA":
+						dibCarta[4] += "$VERDE]" + centrarTexto("▓", 15) + "$BLANCO]";
+						dibCarta[5] += "$VERDE]" + centrarTexto("▓▓▓", 15) + "$BLANCO]";
+						dibCarta[6] += "$VERDE]" + centrarTexto("▓▓▓▓▓", 15) + "$BLANCO]";
+						dibCarta[7] += "$VERDE]" + centrarTexto("▓ ▓", 15) + "$BLANCO]";
+					break;
+					default:
+						dibCarta[4] += "$ROJO]" + centrarTexto("▓▓▓▓▓", 15) + "$BLANCO]";
+						dibCarta[5] += "$ROJO]" + centrarTexto("▓ ▓ ▓", 15) + "$BLANCO]";
+						dibCarta[6] += "$ROJO]" + centrarTexto("▓▓▓▓▓", 15) + "$BLANCO]";
+						dibCarta[7] += "$ROJO]" + centrarTexto("▓▓ ▓▓", 15) + "$BLANCO]";
+					
+					break;
+				}
+				
+				for (int i = 1; i < 8; i++) { dibCarta[i] += "#"; }
+			break;
+		}
+		
+		return dibCarta;
 	}
 
 	void dibujarCartaSelec() {

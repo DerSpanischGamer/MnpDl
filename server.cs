@@ -187,10 +187,10 @@ class server {
 	}
 	
 	string getCarta() {
-		string c = string.Empty;
+		string c = string.Empty; // Esto no funciona
 		
-		for (int i < 0; i < cartas.Length; i++) {
-			if (cartas[i].texto != "NONE") { c = cartas[i].texto; cartas[i] = new Carta(); break; }
+		for (int i = 0; i < cartas.Length; i++) {
+			if (cartas[i] != "NONE") { c = cartas[i]; cartas[i] = "NONE"; break; }
 		}
 		cartasDisp--;
 		comprobarCartas();
@@ -370,7 +370,9 @@ class server {
 				string temp = string.Empty;
 				
 				for (int i = 0; i < int.Parse(mensaje[1]); i++) {
-					temp += ";" + getCarta();
+					string c = getCarta();
+					Console.WriteLine(c);
+					temp += ";" + c;
 				}
 				return "PEDIR;" + mensaje[1] + temp;
 			default:

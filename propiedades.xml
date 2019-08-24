@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<sets>
+	<full>
+		<color>MARRON</color>
+		<setNm>2</setNm>
+		<precio>1</precio>
+		<precios>1;2</precios>
+		<nombres>PARQUE LA PAZ;PQE LOS PATOS</nombres>
+	</full>
+	<full>
+		<color>AZULCLARO</color>
+		<setNm>3</setNm>
+		<precio>1</precio>
+		<precios>1;2;3</precios>
+		<nombres>TRES AGUAS;CHINOS S.A.;CORTE INGLES</nombres>
+	</full>
+	<full>
+		<color>MORADO</color>
+		<setNm>3</setNm>
+		<precio>2</precio>
+		<precios>1;2;4</precios>
+		<nombres>AMOR DE DIOS;PARQUE OESTE;HOSPITAL</nombres>
+	</full>
+	<full>
+		<color>NARANJA</color>
+		<setNm>3</setNm>
+		<precio>2</precio>
+		<precios>1;3;5</precios>
+		<nombres>FNT DEL LEON;CALLE MAYOR;100MONTADITOS</nombres>
+	</full>
+	<full>
+		<color>ROJO</color>
+		<setNm>3</setNm>
+		<precio>3</precio>
+		<precios>2;3;6</precios>
+		<nombres>EL POLI;LA CANALEJA;PISCI PABLO</nombres>
+	</full>
+	<full>
+		<color>AMARILLO</color>
+		<setNm>3</setNm>
+		<precio>3</precio>
+		<precios>2;4;6</precios>
+		<nombres>EL EBOLA;LOS CASTILLOS;LAS FIESTAS</nombres>
+	</full>
+	<full>
+		<color>VERDE</color>
+		<setNm>3</setNm>
+		<precio>4</precio>
+		<precios>2;4;7</precios>
+		<nombres>CASA RO;URBA MARIO;URBA PABLO</nombres>
+	</full>
+	<full>
+		<color>AZULOSCURO</color>
+		<setNm>2</setNm>
+		<precio>4</precio>
+		<precios>3;8</precios>
+		<nombres>KEBAB;MESA CUADRADA</nombres>
+	</full>
+	<full>
+		<color>UTILIDAD</color>
+		<setNm>2</setNm>
+		<precio>2</precio>
+		<precios>1;2</precios>
+		<nombres>AGUA DE GRIFO;LUZ Y GAS</nombres>
+	</full>
+	<full>
+		<color>TRENES</color>
+		<setNm>4</setNm>
+		<precio>2</precio>
+		<precios>1;2;3;4</precios>
+		<nombres>JOSÉ VALDERAS;JOAQUÍN VILUM;ALK CENTRAL;PTA DEL SUR</nombres>
+	</full>
+</sets>

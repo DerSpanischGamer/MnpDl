@@ -97,6 +97,7 @@ class cliente {
 			}
 			
 			sets[k] = new Set(ps, precios);
+			sets[k].actualizarColor(ps[0].color);
 			k++;
 		}
 	}
@@ -146,7 +147,7 @@ class cliente {
 	
 	// ----------------------------- CLASES PROPIEDADED Y SET -----------------------------
 
-	enum construcciones { NADA, CASA, HOTEL }
+	public enum construcciones { NADA, CASA, HOTEL }
 	
 	public class Propiedad {
 		
@@ -189,12 +190,14 @@ class cliente {
 	}
 	
 	public class Set {
-		int max;
-		int currentProps = 0;
+		public readonly int max;
+		public int currentProps = 0;
+		public string color;
+		public bool letra;
 		
-		bool completo = false;
+		public readonly bool completo = false;
 		
-		construcciones cons = construcciones.NADA;
+		public construcciones cons = construcciones.NADA;
 		
 		public readonly Propiedad[] prop;
 	
@@ -204,12 +207,24 @@ class cliente {
 			max = p.setNum;
 			prop = new Propiedad[max];
 			
-			precios = new int[max]; // ¡¡¡ hay que importar los precios
+			color = p.color;
+			letra = p.letra;
+			
+			currentProps = 1;
+			
+			precios = new int[max]; // ¡¡¡ hay que importar los precios TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		}
-		
+	
+		public Set() { color = "none"; letra = false; }
+	
 		public Set(Propiedad[] p, int[] _precios) { // Utilizado sobretodo para guardar todos los sets completos y utilizarlos como tabla de busqueda
 			max = p[0].setNum;
 			prop = p;
+			
+			color = p[0].color;
+			letra = p[0].letra;
+			
+			currentProps = p.Length;
 			
 			precios = _precios;
 		}
@@ -221,21 +236,18 @@ class cliente {
 		
 		public bool canAdd() { if (max == currentProps) { return false; } return true; } // Dice si se pueden añadir propiedades a este set
 	
-		string construir(construcciones _cons) { // Solo toma como parametro una casa o un hotel
+		public string construir(construcciones _cons) { // Solo toma como parametro una casa o un hotel
 			switch (cons) {
-				case construcciones.CASA:   // En este set hay construida una casa
-					if (_cons == cons) { return "Ya hay construida una casa"; } // Y la persona quiere construir otra casa -.-"
-					
-					// Si estamos aqui quiere decir que ya hay una casa construida y que quiere construir un hotel
-					cons = construcciones.HOTEL;
-					return "Exito, hotel construido";
-				case construcciones.HOTEL:
-					return "Imposible construir";
-				default:
+				case construcciones.NADA:
 					cons = _cons;
 					return "Exito, " + _cons.ToString() + " construido";
+				default:
+					return "Imposible construir";
 			}
 		}
+		
+		public void actualizarColor(string c) { color = c; }
+		public void actualizarLetra(bool l)   { letra = l; }
 		
 		public override string ToString() {
 			string tmp = string.Empty;
@@ -246,6 +258,11 @@ class cliente {
 			
 			return "{" + tmp + " }";
 		}
+	}
+	
+	public int[] colorPrecios(string color) {
+		foreach (Set s in sets) { if (s.color == color) return s.precios; }
+		return new int[4] {0, 0, 0, 0};
 	}
 	
 	// ----------------------------- COMUNICACION CON EL SERVIDOR -----------------------------
@@ -353,9 +370,14 @@ class cliente {
 	}
 	
 	// ----------------------------- INICIO CODIGO JUEGO -----------------------------
+
+
+	// (string _nombre, int _precio, string _color, int _setN, bool _tot = false, bool _med = false, bool _letra = false)
 	
 	// Cartas del jugador (sean propiedades puestas en la mesa o cartas por jugar)
-	Set[] propiedades     = new Set[10]   { new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set() };
+	static Set setPrueba = new Set(new Propiedad[2] {new Propiedad("Primera", 2, "AMARILLO", 2, false, false, true), new Propiedad("Segunda", 2, "AMARILLO", 2, false, false, true)}, new int[2] { 1, 2 } );
+	string hola = setPrueba.construir(construcciones.CASA);
+	Set[] propiedades     = new Set[10]   { setPrueba, new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set() };
 	public Carta[] cartas = new Carta[12] { new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta() };
 	
 	int setsDisponibls = 0;
@@ -363,9 +385,13 @@ class cliente {
 	int cartas_jugadas = 0;
 	int cartasUtiles   = 0;
 	
+	Carta getCarta(string _c) {
+		foreach (Carta c in todas)  { if (c.texto == _c) return c; } // Buscar la Carta
+		return new Carta();
+	}
+	
 	void addCarta(string _c) {
-		Carta ca = new Carta();
-		foreach (Carta c in todas)  { if (c.texto == _c) ca = c; } // Buscar la Carta
+		Carta ca = getCarta(_c);
 		
 		if (ca.texto == "NONE") { foreach (Propiedad p in props) { if (p.nombre == _c) ca = new Carta(_c, p.precio, tipo.PROPIEDAD, p.letra); } }
 		
@@ -374,8 +400,10 @@ class cliente {
 	
 	void quitarCarta(int pos) {
 		cartasUtiles--;
+		maxDesplazab--;
 		for (int i = pos; i < cartas.Length - 1; i++) {	cartas[i] = cartas[i + 1]; }
 		cartas[cartas.Length - 1] = new Carta();
+		cartaSelect %= maxDesplazab;
 	}
 	
 	public cliente() {
@@ -456,6 +484,9 @@ class cliente {
 					}
 				} else {
 					Propiedad p = getPropiedad(c.texto);
+					
+					
+					for (int i = 0; i < propiedades.Length; i++) { if (propiedades[i].color == p.color) { anadirASet(i, p); } }
 				}
 			break;
 			case tipo.DINERO:
@@ -478,6 +509,10 @@ class cliente {
 		if (cartas_jugadas == 3) { turno = false; Console.WriteLine("Fin"); }
 	}
 	
+	void anadirASet(int pos, Propiedad p) { // pos es la posicion del set dentro de la variable propiedades
+		
+	}
+	
 	int[] billetes = new int[] { 0, 0, 0, 0, 0, 0 }; // En este orden: 1, 2, 3, 4, 5, 10
 	void addBillete(int precio) {
 		if (precio < 10) { billetes[precio - 1]++; } else { billetes[5]++; }
@@ -495,7 +530,7 @@ class cliente {
 	int     selectPs = 0; // Posicion del select: 0 -> propiedades, 1 -> cartas, 2 -> botones
 	int maxDesplazab = 0; // Maximo que se puede desplazar;
 	
-	string[] dibProps = new string[9]; // Recalcular el numero 9
+	string[] dibProps = new string[16];
 	string[] dibBarja = new string[9];
 	string   dibSelec = string.Empty;
 	
@@ -528,6 +563,7 @@ class cliente {
 		
 		Console.Clear();
 		
+		dibujarProps();
 		dibujarCartaSelec();
 		dibujarBarja();
 		
@@ -539,21 +575,14 @@ class cliente {
 		Console.WriteLine();
 		Console.WriteLine("CARTA EN EL MEDIO");
 		Console.WriteLine();
-		dibujarMedio();
+		dibujarString(dibujarCarta(cartaMedio));
 		Console.WriteLine();
 		if (selectPs == 2) Console.WriteLine(dibSelec);
 		Console.WriteLine();
-		dibujarBotones();
+		dibujarString(botones);
 	}
 	
-	void dibujarBotones() {
-		foreach (string s in botones) { Console.WriteLine(s); }
-	}
-	
-	void dibujarMedio() {
-		string[] d = dibujarCarta(cartaMedio);
-		foreach (string s in d) { Console.WriteLine(s); }
-	}
+	void dibujarProps() { foreach (Set s in propiedades) { if (s.color == "none") { continue; } string[] proxSet = dibujarSet(s); for (int i = 0; i < dibProps.Length; i++) { dibProps[i] += proxSet[i]; } } }
 	
 	void dibujarString(string[] _s) {
 		foreach (string s in _s) {
@@ -712,13 +741,50 @@ class cliente {
 		}
 	}
 	
+	string[] dibSet;
+	string[] dibujarSet(Set s) {
+		dibSet = new string[16]; // el set mas grande posible
+		
+		int construc = (s.cons == construcciones.NADA ? 0 : 1); // Devuelve 0 o 1 en funcion de si no hay o si (en ese orden) un edificio (construccion)
+		
+		if (s.cons != construcciones.NADA) { dibSet[0] += " " + getCarta(s.cons.ToString()).precio.ToString(); if (s.cons == construcciones.CASA) { dibSet[1] += " #$VERDE]" + centrarTexto("CASA", 14) + "$BLANCO]"; } else { dibSet[1] += " #$ROJO]" + centrarTexto("HOTEL", 14) + "$BLANCO]"; } } // Dibujar precio casa u hotel
+	
+		for (int i = construc; i < s.currentProps + construc; i++) { dibSet[i*2] += " " + s.prop[0].precio.ToString(); } // Dibujar los precios en los sets
+		
+		for (int i = 0; i < s.currentProps + construc; i++) { dibSet[i*2] += "-#############-"; dibSet[i*2 + 1] += " #"; } // Dibujar los bordes de las cartas de los sets
+		
+		for (int i = construc; i < s.currentProps + construc; i++) { dibSet[i*2 + 1] += "$" + s.color + "#"; if (s.letra) { dibSet[i*2 + 1] += "$NEGRO]"; } dibSet[i*2 + 1] += centrarTexto(s.prop[i - construc].nombre, 15); dibSet[i*2 + 1] += "$BLANCO]$NEGRO##"; }
+		
+		dibSet[(s.currentProps + construc) * 2] += " ·-#############-·"; // Ultima carta, linea divisoria
+		
+		for (int i = 0; i < 7; i++) { dibSet[(s.currentProps + construc) * 2 + 1 + i] += " #"; } // Borde izq
+		
+		int min = (s.currentProps + construc) * 2 + 1;
+		
+		for (int i = 0; i < s.precios.Length; i++) { dibSet[min + i] += centrarTexto(string.Empty, 7) + (i + 1).ToString() + " --- " + s.precios[i].ToString() + " "; } // Dibujar los precios
+		
+		for (int i = construc; i < s.currentProps + construc; i++) { dibSet[i*2] += s.prop[0].precio.ToString(); } // Dibujar los precios en los sets
+		
+		dibSet[14] += " " + s.prop[0].precio.ToString() + "-#############-" + s.prop[0].precio.ToString(); // linea con precio al final de la carta
+		
+		// Calcular el precio de lo que costaria la renta en este set + dibujar precio del edificio
+		int total = s.precios[s.currentProps - 1];
+		if (s.cons != construcciones.NADA) { dibSet[0] += " " + getCarta(s.cons.ToString()).precio.ToString(); total += getCarta(s.cons.ToString()).precio; }
+		dibSet[15] += " " + centrarTexto(total.ToString(), 17);
+		
+		for (int i = min + s.precios.Length; i < min + 7; i++) { dibSet[i] += centrarTexto(string.Empty, 15); } // Rellenar el resto de la carta
+		for (int i = min; i < min + 7; i++) 				   { dibSet[i] += "#"; } // Borde exterior
+		
+		return dibSet;
+	}
+	
 	string[] dibCarta;
 	string[] dibujarCarta(Carta c) {
 		if (c.precio == -1) return new string[9];
 		dibCarta = new string[9];
 		
 		if (c.precio < 10) {  dibCarta[0] += " " + c.precio.ToString() + "-#############-" + c.precio.ToString(); dibCarta[8] += " " + c.precio.ToString() + "-#############-" + c.precio.ToString(); }
-		else               { dibCarta[0] += " " + c.precio.ToString() + "-###########-" + c.precio.ToString();   dibCarta[8] += " " + c.precio.ToString() + "-###########-" + c.precio.ToString(); }
+		else               {  dibCarta[0] += " " + c.precio.ToString() + "-###########-" + c.precio.ToString();   dibCarta[8] += " " + c.precio.ToString() + "-###########-" + c.precio.ToString(); }
 		
 		for (int i = 1; i < 8; i++) {		
 			dibCarta[i] += " #";

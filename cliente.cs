@@ -355,9 +355,10 @@ class cliente {
 	// ----------------------------- INICIO CODIGO JUEGO -----------------------------
 	
 	// Cartas del jugador (sean propiedades puestas en la mesa o cartas por jugar)
-	Set[] propiedades;
-	public Carta[] cartas = new Carta[12] { new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta("COMODIN MARRON AZULCLARO", 2, tipo.PROPIEDAD), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta() };
+	Set[] propiedades     = new Set[10]   { new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set() };
+	public Carta[] cartas = new Carta[12] { new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta() };
 	
+	int setsDisponibls = 0;
 	int cartaSelect    = 0;
 	int cartas_jugadas = 0;
 	int cartasUtiles   = 0;
@@ -369,6 +370,12 @@ class cliente {
 		if (ca.texto == "NONE") { foreach (Propiedad p in props) { if (p.nombre == _c) ca = new Carta(_c, p.precio, tipo.PROPIEDAD, p.letra); } }
 		
 		for (int i = 0; i < cartas.Length; i++) { if (cartas[i].texto == "NONE") { cartas[i] = ca; break; } } // Añadir a la baraja
+	}
+	
+	void quitarCarta(int pos) {
+		cartasUtiles--;
+		for (int i = pos; i < cartas.Length - 1; i++) {	cartas[i] = cartas[i + 1]; }
+		cartas[cartas.Length - 1] = new Carta();
 	}
 	
 	public cliente() {
@@ -384,8 +391,8 @@ class cliente {
 		while (nametag.Length == 0 || nametag.Length >= 10 || nametag.Contains(" ") || numeroPuntosComas(nametag) > 1) {
 			Console.WriteLine("Introduce tu nombre de usuario: ");
 			nametag = Console.ReadLine();
-			Console.Clear();
 			Console.WriteLine("Nombre invalido, tiene que tener maximo 10 letras, no contener ni espacios ni ;");
+			Console.Clear();
 		}
 		enviarMensaje(prepararMensaje(new string[2] { "UNIRSE", nametag }));
 		
@@ -397,7 +404,7 @@ class cliente {
 	}
 	
 	public static void Main() {
-		Console.WriteLine("Bienvenido a Alcorcopoly Real");
+		Console.WriteLine("Bienvenido a Alcor poly Real");
 		
 		cliente c = new cliente();
 	}
@@ -425,8 +432,10 @@ class cliente {
 				while (turno) {
 					var tecla = Console.ReadKey().Key;
 					
-					if      (tecla == ConsoleKey.RightArrow) { cartaSelect++; cartaSelect %= cartasUtiles; dibujarPantalla(); }
-					else if (tecla == ConsoleKey.LeftArrow)  { cartaSelect--; cartaSelect %= cartasUtiles; dibujarPantalla(); }
+					if      (tecla == ConsoleKey.RightArrow && maxDesplazab != 0) { cartaSelect++; cartaSelect %= maxDesplazab; dibujarPantalla(); }
+					else if (tecla == ConsoleKey.LeftArrow  && maxDesplazab != 0)  { cartaSelect--; cartaSelect %= maxDesplazab; dibujarPantalla(); }
+					else if (tecla == ConsoleKey.UpArrow)    { selectPs--; selectPs %= 3; cartaSelect = 0; dibujarPantalla(); }
+					else if (tecla == ConsoleKey.DownArrow)  { selectPs++; selectPs %= 3; cartaSelect = 0; dibujarPantalla(); }
 					else if (tecla == ConsoleKey.Enter)      { action(cartas[cartaSelect]); }
 				}
 				
@@ -436,7 +445,7 @@ class cliente {
 	}
 	
 	void action(Carta c) { // !!!!!!!!!!!!!!!!! POR HACER, QUE OCURRE CUANDO EL JUGADOR JUEGA UNA CARTA
-		Console.WriteLine("Programar acciones");
+		Console.WriteLine("Programar este tipo de acción !");
 		switch (c.clase) {
 			case tipo.PROPIEDAD:
 				if (c.texto.Contains("COMODIN")) {
@@ -450,9 +459,15 @@ class cliente {
 				}
 			break;
 			case tipo.DINERO:
+				addBillete(c.precio);
 				
+				quitarCarta(cartaSelect);
+				cartas_jugadas++;
+			
+				dibujarPantalla();
 			break;
 			case tipo.ACCION:
+				
 			break;
 			case tipo.CONSTRUCCION:
 			break;
@@ -460,7 +475,12 @@ class cliente {
 			break;
 		}
 		
-		if (cartas_jugadas == 3) { turno = false; }
+		if (cartas_jugadas == 3) { turno = false; Console.WriteLine("Fin"); }
+	}
+	
+	int[] billetes = new int[] { 0, 0, 0, 0, 0, 0 }; // En este orden: 1, 2, 3, 4, 5, 10
+	void addBillete(int precio) {
+		if (precio < 10) { billetes[precio - 1]++; } else { billetes[5]++; }
 	}
 	
 	int contarEspacios(string s) {
@@ -472,7 +492,10 @@ class cliente {
 	}
 	
 	// ----------------------------- PARTE GRÁFICA -----------------------------
-	string[] dibProps = new string[9];
+	int     selectPs = 0; // Posicion del select: 0 -> propiedades, 1 -> cartas, 2 -> botones
+	int maxDesplazab = 0; // Maximo que se puede desplazar;
+	
+	string[] dibProps = new string[9]; // Recalcular el numero 9
 	string[] dibBarja = new string[9];
 	string   dibSelec = string.Empty;
 	
@@ -480,13 +503,28 @@ class cliente {
 	string[] cartaMd = new string[9];
 	string   txtHost = string.Empty;
 	
+	string[] botones     = new string[3] { " ################# ################# #################", " #               # #               # #               #", " ################# ################# #################" };
+	
 	void resetearProps() { for (int i = 0; i < dibProps.Length; i++) { dibProps[i] = string.Empty; } }
 	void resetearBarja() { dibSelec = string.Empty; for (int i = 0; i < dibBarja.Length; i++) { dibBarja[i] = string.Empty; } }
 	void resetearCrtMd() { txtHost = string.Empty;  for (int i = 0; i < cartaMd.Length ; i++) { cartaMd[i]  = string.Empty; } }
 
 	void dibujarPantalla() {
+		switch (selectPs) {
+			case 0:
+				maxDesplazab = setsDisponibls;
+			break;
+			case 1:
+				maxDesplazab = cartasUtiles;
+			break;
+			case 2:
+				maxDesplazab = 3;
+			break;
+		}
+		
 		resetearProps();
 		resetearBarja();
+		resetearCrtMd();
 		
 		Console.Clear();
 		
@@ -495,9 +533,26 @@ class cliente {
 		
 		dibujarString(dibProps);
 		Console.WriteLine();
-		Console.WriteLine(dibSelec);
+		if (selectPs != 2) Console.WriteLine(dibSelec);
 		Console.WriteLine();
 		dibujarString(dibBarja);
+		Console.WriteLine();
+		Console.WriteLine("CARTA EN EL MEDIO");
+		Console.WriteLine();
+		dibujarMedio();
+		Console.WriteLine();
+		if (selectPs == 2) Console.WriteLine(dibSelec);
+		Console.WriteLine();
+		dibujarBotones();
+	}
+	
+	void dibujarBotones() {
+		foreach (string s in botones) { Console.WriteLine(s); }
+	}
+	
+	void dibujarMedio() {
+		string[] d = dibujarCarta(cartaMedio);
+		foreach (string s in d) { Console.WriteLine(s); }
 	}
 	
 	void dibujarString(string[] _s) {
@@ -752,6 +807,7 @@ class cliente {
 
 	void dibujarCartaSelec() {
 		for (int i = 0; i < cartaSelect; i++) { dibSelec += centrarTexto(string.Empty, 18); }
-		dibSelec += " ╔===============╗";
+		if   (selectPs != 0) dibSelec += " ╔===============╗";
+		else dibSelec += " ╚===============╝";
 	}
 }

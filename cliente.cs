@@ -84,16 +84,15 @@ class cliente {
 			string[] _precis = extraerInfoXML(cantidad, node.SelectSingleNode("precios").InnerText);
 			int[]    precios = new int[cantidad];
 		
-			bool   letra   = bool.Parse(node.SelectSingleNode("letra").InnerText);
+			bool     letra   = bool.Parse(node.SelectSingleNode("letra").InnerText);
 		
 			for (int i = 0; i < cantidad; i++) {
 				precios[i] = int.Parse(_precis[i]);
 				
-				Propiedad d = new Propiedad(nombres[i], precio, color, cantidad, false, false, letra);
-				ps[i] = new Propiedad(nombres[i], precio, color, cantidad, false, false, letra);
-				
-				props[j] = ps[i];
+				props[j] = new Propiedad(nombres[i], precio, color, cantidad, _precis, false, false, letra);
 				j++;
+				
+				ps[i]    = new Propiedad(nombres[i], precio, color, cantidad, _precis, false, false, letra);
 			}
 			
 			sets[k] = new Set(ps, precios);
@@ -154,8 +153,8 @@ class cliente {
 		public readonly string nombre;
 		public readonly int    precio;
 		
-		bool wildTot;
-		bool wildMed;
+		public readonly bool wildTot;
+		public readonly bool wildMed;
 		
 		public readonly string color;
 		
@@ -163,9 +162,12 @@ class cliente {
 		
 		public readonly bool letra;
 		
-		public Propiedad(string _nombre, int _precio, string _color, int _setN, bool _tot = false, bool _med = false, bool _letra = false) {
+		public readonly int[] precios;
+		
+		public Propiedad(string _nombre, int _precio, string _color, int _setN, string[] _precios, bool _tot = false, bool _med = false, bool _letra = false) {
 			nombre = _nombre;
 			precio = _precio;
+			precios = stringIntArray(_precios);
 			
 			color = _color;
 			
@@ -178,6 +180,12 @@ class cliente {
 		
 		public bool isNormalCart() { if (wildMed || wildTot) {return false; } return true; }
 		public bool isTotWild()    { return wildTot; }
+		
+		int[] stringIntArray(string[] p) { 
+			int[] a = new int[p.Length];
+			for (int i = 0; i < p.Length; i++) { a[i] = int.Parse(p[i]); }
+			return a;
+		}
 		
 		public override string ToString() {
 			return nombre + " " + precio.ToString();
@@ -195,7 +203,7 @@ class cliente {
 		public string color;
 		public bool letra;
 		
-		public readonly bool completo = false;
+		public bool completo = false;
 		
 		public construcciones cons = construcciones.NADA;
 		
@@ -206,13 +214,17 @@ class cliente {
 		public Set(Propiedad p) {   // Utilizado para guardar los sets que tiene el jugador
 			max = p.setNum;
 			prop = new Propiedad[max];
+			prop[0] = p;
+			
+			// Anadir instancias vacias de propiedades para que no de null error
+			for (int i = 1; i < max; i++) { prop[i] = new Propiedad("none", 0, "AMARILLO", 0, new string[1] { "0" }); }
 			
 			color = p.color;
 			letra = p.letra;
 			
 			currentProps = 1;
 			
-			precios = new int[max]; // ¡¡¡ hay que importar los precios TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			precios = p.precios;
 		}
 	
 		public Set() { color = "none"; letra = false; }
@@ -232,6 +244,8 @@ class cliente {
 		public void addProp(Propiedad p) { // Añade una propiedad al set
 			prop[currentProps] = p;
 			currentProps++;
+			
+			if (currentProps == max) completo = true;
 		}
 		
 		public bool canAdd() { if (max == currentProps) { return false; } return true; } // Dice si se pueden añadir propiedades a este set
@@ -337,10 +351,13 @@ class cliente {
 				Console.WriteLine("Unido a la partida con la id " + id.ToString() + ". Esperando que empiece...");
 			break;
 			case "ESTADO":
-				if (estadoActual.ToString() != mensaje[1]) { estadoActual = getEstado(mensaje[1]); accionEstado(); }
+				if (txtHost != mensaje[2] && mensaje[1] != "ESPERANDO")				   { txtHost      = mensaje[2];           dibujarPantalla(); }
+				if (cartaMedio.texto != mensaje[3] && mensaje[1] != "ESPERANDO")        { cartaMedio   = getCarta(mensaje[3]); dibujarPantalla(); }
+			
+				if (estadoActual.ToString() != mensaje[1]) { estadoActual = getEstado(mensaje[1]); accionEstado(); } // Ultimo porque accionEstado podria bloquear
 			break;
 			case "PEDIR":
-				for (int i = 0; i < int.Parse(mensaje[1]); i++) { addCarta(mensaje[2 + i]); Console.WriteLine(mensaje[2 + i]); }
+				for (int i = 0; i < int.Parse(mensaje[1]); i++) { addCarta(mensaje[2 + i]); }
 				dibujarPantalla();
 			break;
 			case "NOEXITO":
@@ -375,9 +392,7 @@ class cliente {
 	// (string _nombre, int _precio, string _color, int _setN, bool _tot = false, bool _med = false, bool _letra = false)
 	
 	// Cartas del jugador (sean propiedades puestas en la mesa o cartas por jugar)
-	static Set setPrueba = new Set(new Propiedad[2] {new Propiedad("Primera", 2, "AMARILLO", 2, false, false, true), new Propiedad("Segunda", 2, "AMARILLO", 2, false, false, true)}, new int[2] { 1, 2 } );
-	string hola = setPrueba.construir(construcciones.CASA);
-	Set[] propiedades     = new Set[10]   { setPrueba, new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set() };
+	Set[] propiedades     = new Set[10]   { new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set() };
 	public Carta[] cartas = new Carta[12] { new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta(), new Carta() };
 	
 	int setsDisponibls = 0;
@@ -403,7 +418,7 @@ class cliente {
 		maxDesplazab--;
 		for (int i = pos; i < cartas.Length - 1; i++) {	cartas[i] = cartas[i + 1]; }
 		cartas[cartas.Length - 1] = new Carta();
-		cartaSelect %= maxDesplazab;
+		if (maxDesplazab != 0) cartaSelect %= maxDesplazab;
 	}
 	
 	public cliente() {
@@ -451,8 +466,6 @@ class cliente {
 			case estado.TURNO:
 				turno = true;
 				
-				Console.WriteLine("Programar los turnos :P");
-				
 				// Primero pedir cartas
 				if (cartasUtiles == 0) { enviarMensaje(prepararMensaje(new string[2] { "PEDIR", "5" })); cartasUtiles += 5; }
 				else 				   { enviarMensaje(prepararMensaje(new string[2] { "PEDIR", "2" })); cartasUtiles += 2; }
@@ -464,10 +477,47 @@ class cliente {
 					else if (tecla == ConsoleKey.LeftArrow  && maxDesplazab != 0)  { cartaSelect--; cartaSelect %= maxDesplazab; dibujarPantalla(); }
 					else if (tecla == ConsoleKey.UpArrow)    { selectPs--; selectPs %= 3; cartaSelect = 0; dibujarPantalla(); }
 					else if (tecla == ConsoleKey.DownArrow)  { selectPs++; selectPs %= 3; cartaSelect = 0; dibujarPantalla(); }
-					else if (tecla == ConsoleKey.Enter)      { action(cartas[cartaSelect]); }
+					else if (tecla == ConsoleKey.Enter)      { if (selectPs == 1) { action(cartas[cartaSelect]); } else if (selectPs == 2) { boton(cartaSelect); } }
 				}
 				
-				// Enviar que se ha acabado el turno
+				finTurno();
+			break;
+		}
+	}
+	
+	void finTurno() {
+		cartas_jugadas = 0;
+		enviarMensaje(prepararMensaje(new string[2] { "FINTURNO", id.ToString() }));
+	}
+	
+	void boton(int pos) { // 0 = ver dinero, 1 = ver enemigo, 2 = pasar turno
+		switch (pos) {
+			case 0:
+				Console.Clear();
+				
+				Console.WriteLine();
+				Console.WriteLine();
+				
+				for (int i = 0; i < billetes.Length; i++) { Console.WriteLine(" · BILLETES DE " + nombreBilletes[i] + ": " + billetes[i].ToString()); }
+				
+				Console.WriteLine();
+				
+				int tot = 0;
+				for (int i = 0; i < billetes.Length; i++) { tot += billetes[i] * int.Parse(nombreBilletes[i]); }
+				Console.WriteLine(" · TOTAL: " + tot.ToString());
+				
+				Console.WriteLine();
+				Console.WriteLine();
+				Console.WriteLine("PULSA ENTER PARA VOLVER");
+			
+				bool temp = false;
+				while (!temp) { var tecla = Console.ReadKey().Key; if (tecla == ConsoleKey.Enter) { temp = true; } }
+				dibujarPantalla();
+			break;
+			case 1:
+			break;
+			case 2:
+				if (turno) finTurno();
 			break;
 		}
 	}
@@ -482,11 +532,15 @@ class cliente {
 					} else { // Comodin a elegir entre dos colores
 						
 					}
-				} else {
+				} else { // Propiedad normal
 					Propiedad p = getPropiedad(c.texto);
 					
+					int temp = -1;
+					for (int i = 0; i < propiedades.Length; i++) { if (propiedades[i].color == p.color) { temp = i; break; } } // Se queda aqui si ya existe un set del mismo color
+					if (temp != -1) { anadirASet(temp, p); } else { crearNuevoSet(p); } // Se llega aqui si no hay un set del mismo color
 					
-					for (int i = 0; i < propiedades.Length; i++) { if (propiedades[i].color == p.color) { anadirASet(i, p); } }
+					quitarCarta(cartaSelect);
+					dibujarPantalla();
 				}
 			break;
 			case tipo.DINERO:
@@ -498,22 +552,36 @@ class cliente {
 				dibujarPantalla();
 			break;
 			case tipo.ACCION:
-				
+				Console.WriteLine("ACCION");
 			break;
 			case tipo.CONSTRUCCION:
+				Console.WriteLine("CONSTRUCCION");
 			break;
 			case tipo.RENTA:
+				Console.WriteLine("RENTA");
 			break;
 		}
 		
 		if (cartas_jugadas == 3) { turno = false; Console.WriteLine("Fin"); }
 	}
 	
+	void crearNuevoSet(Propiedad p) {
+		for (int i = 0; i < propiedades.Length; i++) { if (propiedades[i].color == "none") { propiedades[i] = new Set(p); break; } } setsDisponibls++;
+	}
+	
 	void anadirASet(int pos, Propiedad p) { // pos es la posicion del set dentro de la variable propiedades
+		Console.Clear();
 		
+		if (propiedades[pos].completo) { // significa que el set contiene wildcards, ya que un set completo con cartas "normales" no puede recibir otra carta normal
+			Propiedad comodin; // esta variable guardara el comodin
+			for (int i = 0; i < propiedades[pos].prop.Length; i++) { if (propiedades[pos].prop[i].wildTot || propiedades[pos].prop[i].wildMed) { comodin = propiedades[pos].prop[i]; propiedades[pos].prop[i] = p; break; } }
+		} else {
+			propiedades[pos].addProp(p);
+		}
 	}
 	
 	int[] billetes = new int[] { 0, 0, 0, 0, 0, 0 }; // En este orden: 1, 2, 3, 4, 5, 10
+	string[] nombreBilletes = new string[6] { "1", "2", "3", "4", "5", "10" };
 	void addBillete(int precio) {
 		if (precio < 10) { billetes[precio - 1]++; } else { billetes[5]++; }
 	}
@@ -536,13 +604,13 @@ class cliente {
 	
 	Carta    cartaMedio = new Carta("QUE EMPIECE LA PARTIDA", 10, tipo.ACCION);
 	string[] cartaMd = new string[9];
-	string   txtHost = string.Empty;
+	string   txtHost = " Testing 101";
 	
-	string[] botones     = new string[3] { " ################# ################# #################", " #               # #               # #               #", " ################# ################# #################" };
+	string[] botones     = new string[3] { " ################# ################# #################", " #   VER DINERO  # #  VER ENEMIGOS # #  PASAR TURNO  #", " ################# ################# #################" };
 	
 	void resetearProps() { for (int i = 0; i < dibProps.Length; i++) { dibProps[i] = string.Empty; } }
 	void resetearBarja() { dibSelec = string.Empty; for (int i = 0; i < dibBarja.Length; i++) { dibBarja[i] = string.Empty; } }
-	void resetearCrtMd() { txtHost = string.Empty;  for (int i = 0; i < cartaMd.Length ; i++) { cartaMd[i]  = string.Empty; } }
+	void resetearCrtMd() { for (int i = 0; i < cartaMd.Length ; i++) { cartaMd[i]  = string.Empty; } }
 
 	void dibujarPantalla() {
 		switch (selectPs) {
@@ -567,18 +635,34 @@ class cliente {
 		dibujarCartaSelec();
 		dibujarBarja();
 		
+		Console.WriteLine();
+		Console.WriteLine();
+		
 		dibujarString(dibProps);
+		
 		Console.WriteLine();
+		
 		if (selectPs != 2) Console.WriteLine(dibSelec);
+		
 		Console.WriteLine();
+		
 		dibujarString(dibBarja);
+		
 		Console.WriteLine();
-		Console.WriteLine("CARTA EN EL MEDIO");
+		
 		Console.WriteLine();
+		Console.WriteLine(txtHost);
+		Console.WriteLine(" CARTA EN EL MEDIO");
+		
+		
+		Console.WriteLine();
+		
 		dibujarString(dibujarCarta(cartaMedio));
+		
 		Console.WriteLine();
 		if (selectPs == 2) Console.WriteLine(dibSelec);
 		Console.WriteLine();
+		
 		dibujarString(botones);
 	}
 	
@@ -765,15 +849,16 @@ class cliente {
 		
 		for (int i = construc; i < s.currentProps + construc; i++) { dibSet[i*2] += s.prop[0].precio.ToString(); } // Dibujar los precios en los sets
 		
-		dibSet[14] += " " + s.prop[0].precio.ToString() + "-#############-" + s.prop[0].precio.ToString(); // linea con precio al final de la carta
+		dibSet[min + 7] += " " + s.prop[0].precio.ToString() + "-#############-" + s.prop[0].precio.ToString(); // linea con precio al final de la carta
 		
 		// Calcular el precio de lo que costaria la renta en este set + dibujar precio del edificio
 		int total = s.precios[s.currentProps - 1];
-		if (s.cons != construcciones.NADA) { dibSet[0] += " " + getCarta(s.cons.ToString()).precio.ToString(); total += getCarta(s.cons.ToString()).precio; }
+		if (s.cons != construcciones.NADA) { dibSet[0] += getCarta(s.cons.ToString()).precio.ToString(); total += getCarta(s.cons.ToString()).precio; }
 		dibSet[15] += " " + centrarTexto(total.ToString(), 17);
 		
 		for (int i = min + s.precios.Length; i < min + 7; i++) { dibSet[i] += centrarTexto(string.Empty, 15); } // Rellenar el resto de la carta
 		for (int i = min; i < min + 7; i++) 				   { dibSet[i] += "#"; } // Borde exterior
+		for (int i = min + 8; i < 15; i++)					   { dibSet[i] += centrarTexto(string.Empty, 18); }
 		
 		return dibSet;
 	}

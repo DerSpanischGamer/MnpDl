@@ -251,10 +251,16 @@ class server {
 	
 	public enum estado { ESPERANDO, STANDBY, TURNO };
 	
+	string medio 	   = "QUE EMPIECE LA PARTIDA";
+	volatile string mensajeHost = "idk";
+	int turnoJug       = 0;
+	
 	void comando(string _cmd) {
 		switch (_cmd) {
 			case "EMPEZAR":
-				if (jugadorNum > 0) { // CAMBIAR PARA CUANDO EL JUEGO ESTE """LISTO"""
+				if (jugadorNum > 0 && !jugando) { // CAMBIAR PARA CUANDO EL JUEGO ESTE """LISTO"""
+					mensajeHost = "[Server] Que gane el mejor :)";
+					
 					Console.WriteLine("Empenzado la partida");
 					
 					jugando = true;
@@ -275,6 +281,15 @@ class server {
 				Console.WriteLine("Comando no reconocido");
 			break;
 		}
+	}
+	
+	void avanzarTurno() {
+		trueJugad[turnoJug].estadoJugador = estado.STANDBY;
+		
+		turnoJug++;
+		turnoJug %= jugadorNum;
+	
+		trueJugad[turnoJug].estadoJugador = estado.TURNO;
 	}
 	
 	void empezarTCPServer() {
@@ -300,6 +315,8 @@ class server {
 	
 	bool addJugador(string nametag) {
 		if (jugadorNum == 5 || jugando) return false;
+		
+		mensajeHost = "[Server] Se ha unido " + nametag;
 		
 		Jugador nuevo = new Jugador(nametag, idCnt);
 		for (int i = 0; i < jugadores.Length; i++) { if (jugadores[i].id == -1) { jugadores[i] = nuevo; break;} }
@@ -365,7 +382,10 @@ class server {
 				if (addJugador(mensaje[1])) return  "UNIDO;" + (idCnt - 1).ToString();
 				else return "NOEXITO";
 			case "ESTADO":
-				return "ESTADO;" + getJugadorById(int.Parse(mensaje[1])).estadoJugador.ToString();
+				return "ESTADO;" + getJugadorById(int.Parse(mensaje[1])).estadoJugador.ToString() + ";" + mensajeHost + ";" + medio;
+			case "FINTURNO":
+				mensajeHost = "[" + getJugadorById(int.Parse(mensaje[1])).nombre + "]" + " Ha acabado su turno";
+				return "ESTADO;" + getJugadorById(int.Parse(mensaje[1])).estadoJugador.ToString() + ";" + mensajeHost + ";" + medio;
 			case "PEDIR":
 				string temp = string.Empty;
 				
@@ -374,7 +394,8 @@ class server {
 					Console.WriteLine(c);
 					temp += ";" + c;
 				}
-				return "PEDIR;" + mensaje[1] + temp;
+				//return "PEDIR;" + mensaje[1] + temp;
+				return "PEDIR;5;EL POLI;LA CANALEJA;PISCI PABLO;FNT DEL LEON;CALLE MAYOR"; // QUITAR, SOLO DEBUG
 			default:
 				Console.WriteLine("ERROR: El mensaje: " + _msg + " no puede ser reconocido");
 				return "NOEXITO";

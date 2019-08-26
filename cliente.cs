@@ -527,11 +527,7 @@ class cliente {
 		switch (c.clase) {
 			case tipo.PROPIEDAD:
 				if (c.texto.Contains("COMODIN")) {
-					if (contarEspacios(c.texto) == 1) { // Significa COMODIN CARD que puede ser cualquiera
-						
-					} else { // Comodin a elegir entre dos colores
-						
-					}
+					colocarComodin(c);
 				} else { // Propiedad normal
 					Propiedad p = getPropiedad(c.texto);
 					
@@ -552,7 +548,7 @@ class cliente {
 				dibujarPantalla();
 			break;
 			case tipo.ACCION:
-				Console.WriteLine("ACCION");
+				Console.WriteLine(c.texto);
 			break;
 			case tipo.CONSTRUCCION:
 				Console.WriteLine("CONSTRUCCION");
@@ -565,6 +561,58 @@ class cliente {
 		if (cartas_jugadas == 3) { turno = false; Console.WriteLine("Fin"); }
 	}
 	
+	void colocarComodin(Carta c) {
+		if (contarEspacios(c.texto) == 1) { // Significa COMODIN CARD que puede ser cualquiera
+					} else { // Comodin a elegir entre dos colores
+						// Buscar los sets de los colores
+						int[] disponibilidad = new int[2] { 0, 0 }; // 0 = crear, 1 = no completo, 2 = completo
+						string[] colores = new string[2] { separarPalabras(c.texto)[1], separarPalabras(c.texto)[2] };
+						Set[] ss = new Set[2] { new Set(new Propiedad("CREAR SET", 0, colores[0], 1, getPreciosString(colores[0]))), new Set(new Propiedad("CREAR SET", 0, colores[1], 1, getPreciosString(colores[1]))) };
+					
+						for (int i = 0; i < colores.Length; i++) { foreach (Set a in propiedades) { if (colores[i] == a.color) { ss[i] = a; disponibilidad[i] = 1; if (a.completo) { disponibilidad[i] = 2; }; break; } } }
+						
+						bool elegido = false;
+						int pos = 0;
+						string[] dibSets;
+						string mens = string.Empty;
+						
+						while (!elegido) {
+							// Dibujar la pantalla de eleccion
+							dibSets = new string[16];
+							
+							Console.Clear();
+							Console.Write(mens);
+							foreach (Set s in ss) { string[] proxSet = dibujarSet(s, false); for (int i = 0; i < proxSet.Length; i++) { dibSets[i] += proxSet[i]; } }
+							dibujarString(dibSets);
+							
+							Console.WriteLine();
+							for (int i = 0; i < pos; i++) { Console.Write(centrarTexto(string.Empty, 18)); }
+							Console.Write(" ╚===============╝");
+							
+							var tecla = Console.ReadKey().Key;
+							if      (tecla == ConsoleKey.RightArrow) { pos++; pos %= disponibilidad.Length; }
+							else if (tecla == ConsoleKey.LeftArrow)  { pos--; pos %= disponibilidad.Length; }
+							else if (tecla == ConsoleKey.Enter)      { 
+								switch (disponibilidad[pos]) {
+									case 0:
+										crearNuevoSet(new Propiedad("COMODIN", c.precio, colores[pos], getTamanio(colores[pos]), getPreciosString(colores[pos]), false, true, c.letraNegra));
+										elegido = true;
+									break;
+									case 1:
+										foreach (Set s in propiedades) { if (s.color == ss[pos].color) { s.addProp(new Propiedad("COMODIN", c.precio, colores[pos], getTamanio(colores[pos]), getPreciosString(colores[pos]), false, true, c.letraNegra)); } }
+										elegido = true;
+									break;
+									case 2:
+										mens = " IMPOSIBLE, EL SET SELECCIONADO YA ESTA COMPLETO";
+									break;
+								}
+							}
+						}
+						quitarCarta(cartaSelect);
+						dibujarPantalla();
+					}
+	}
+	
 	void crearNuevoSet(Propiedad p) {
 		for (int i = 0; i < propiedades.Length; i++) { if (propiedades[i].color == "none") { propiedades[i] = new Set(p); break; } } setsDisponibls++;
 	}
@@ -575,6 +623,8 @@ class cliente {
 		if (propiedades[pos].completo) { // significa que el set contiene wildcards, ya que un set completo con cartas "normales" no puede recibir otra carta normal
 			Propiedad comodin; // esta variable guardara el comodin
 			for (int i = 0; i < propiedades[pos].prop.Length; i++) { if (propiedades[pos].prop[i].wildTot || propiedades[pos].prop[i].wildMed) { comodin = propiedades[pos].prop[i]; propiedades[pos].prop[i] = p; break; } }
+		
+			// Dibujar una pantalla para seleccionar el comodin que se tiene que ir
 		} else {
 			propiedades[pos].addProp(p);
 		}
@@ -766,11 +816,23 @@ class cliente {
 		return null;
 	}
 	
+	int getTamanio(string color) {
+		foreach (Set s in sets) { if (s.prop[0].color == color) { return s.max; } }
+		return 0;
+	}
 	
 	int[] getPrecios(string color) {
 		foreach (Set s in sets) { if (s.prop[0].color == color) { return s.precios; } }
 		
 		return null;
+	}
+	
+	string[] getPreciosString(string color) {
+		int[] prex = getPrecios(color);
+		string [] p = new string[prex.Length];
+		
+		for (int i = 0; i < prex.Length; i++) { p[i] = prex[i].ToString(); }
+		return p;
 	}
 	
 	void wildCart(string[] palabras) {  // Se encarga de dibujar los comodines en las cartas en la mano
@@ -826,7 +888,7 @@ class cliente {
 	}
 	
 	string[] dibSet;
-	string[] dibujarSet(Set s) {
+	string[] dibujarSet(Set s, bool pp = true) {
 		dibSet = new string[16]; // el set mas grande posible
 		
 		int construc = (s.cons == construcciones.NADA ? 0 : 1); // Devuelve 0 o 1 en funcion de si no hay o si (en ese orden) un edificio (construccion)
@@ -854,7 +916,8 @@ class cliente {
 		// Calcular el precio de lo que costaria la renta en este set + dibujar precio del edificio
 		int total = s.precios[s.currentProps - 1];
 		if (s.cons != construcciones.NADA) { dibSet[0] += getCarta(s.cons.ToString()).precio.ToString(); total += getCarta(s.cons.ToString()).precio; }
-		dibSet[15] += " " + centrarTexto(total.ToString(), 17);
+		
+		if (pp) { dibSet[15] += " " + centrarTexto(total.ToString(), 17); } else { dibSet[15] += " " + centrarTexto(string.Empty, 17); }
 		
 		for (int i = min + s.precios.Length; i < min + 7; i++) { dibSet[i] += centrarTexto(string.Empty, 15); } // Rellenar el resto de la carta
 		for (int i = min; i < min + 7; i++) 				   { dibSet[i] += "#"; } // Borde exterior

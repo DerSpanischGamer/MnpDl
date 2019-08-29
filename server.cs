@@ -395,7 +395,7 @@ class server {
 					temp += ";" + c;
 				}
 				//return "PEDIR;" + mensaje[1] + temp;
-				return "PEDIR;5;CASA RO;URBA MARIO;COMODIN VERDE AZULOSCURO;KEBAB;MESA CUADRADA"; // QUITAR, SOLO DEBUG
+				return "PEDIR;5;CASA RO;COMODIN CARD;COMODIN VERDE AZULOSCURO;KEBAB;MESA CUADRADA"; // QUITAR, SOLO DEBUG
 			default:
 				Console.WriteLine("ERROR: El mensaje: " + _msg + " no puede ser reconocido");
 				return "NOEXITO";

@@ -73,11 +73,11 @@
 		<nombres>AGUA DE GRIFO;LUZ Y GAS</nombres>
 	</full>
 	<full>
-		<color>TRENES</color>
+		<color>BLANCO</color>
 		<setNm>4</setNm>
 		<precio>2</precio>
 		<precios>1;2;3;4</precios>
-		<letra>false</letra>
+		<letra>true</letra>
 		<nombres>JOSÉ VALDERAS;JOAQUÍN VILUM;ALK CENTRAL;PTA DEL SUR</nombres>
 	</full>
 </sets>

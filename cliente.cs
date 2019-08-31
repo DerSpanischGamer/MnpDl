@@ -40,7 +40,7 @@ class cliente {
 	
 	// WILDS MEDIOS
 	
-	private Carta wldTt = new Carta("COMODIN CARD", 9, tipo.PROPIEDAD);
+	private Carta wldTt = new Carta("COMODIN GAY", 9, tipo.PROPIEDAD);
 	private Carta mdMAC = new Carta("COMODIN MARRON AZULCLARO", 2, tipo.PROPIEDAD);
 	private Carta mdNam = new Carta("COMODIN NARANJA MORADO", 2, tipo.PROPIEDAD);
 	private Carta mdAmR = new Carta("COMODIN AMARILLO ROJO", 2, tipo.PROPIEDAD);
@@ -568,7 +568,7 @@ class cliente {
 	
 	void colocarComodin(Carta c, bool quitar = true) {
 		bool elegido = false;
-		if (contarEspacios(c.texto) == 1) { // Significa COMODIN CARD que puede ser cualquiera
+		if (contarEspacios(c.texto) == 1) { // Significa COMODIN GAY que puede ser cualquiera
 			string[] colors = new string[sets.Length];
 			for (int i = 0; i < colors.Length; i++) { colors[i] = sets[i].color; }
 			
@@ -594,7 +594,7 @@ class cliente {
 				// Teclas
 				var tecla = Console.ReadKey().Key;
 				if 		(tecla == ConsoleKey.RightArrow) { pos++; pos %= dispos; }
-				else if (tecla == ConsoleKey.LeftArrow)  { pos--; pos %= dispos; }
+				else if (tecla == ConsoleKey.LeftArrow)  { pos--; if (pos < 0) { pos = 0; } }
 				else if (tecla == ConsoleKey.Enter)      { 
 					foreach (Set s in propiedades) { if (s.color == colors[pos]) { s.addProp(new Propiedad(c.texto, c.precio, s.color, getTamanio(s.color), getPreciosString(s.color), true, false, c.letraNegra)); elegido = true; } } // aqui ya hay un set que existe y por lo tanto añadimos la carta
 					if (!elegido) crearNuevoSet(new Propiedad(c.texto, c.precio, colors[pos], getTamanio(colors[pos]), getPreciosString(colors[pos]), true, false, c.letraNegra));
@@ -663,7 +663,7 @@ class cliente {
 			for (int i = 0; i < propiedades[pos].max; i++) {  // Hay que separar ya que a la hora de dibujarlo la funcion lee el nombre de la carta
 				if (propiedades[pos].prop[i].wildTot) {
 					posiblesComodines[i] = propiedades[pos].prop[i];
-					posiblesComodines[i].nombre = "COMODIN CARD";
+					posiblesComodines[i].nombre = "COMODIN GAY";
 					continue;
 				} else if (propiedades[pos].prop[i].wildMed) {
 					posiblesComodines[i] = propiedades[pos].prop[i];
@@ -677,14 +677,35 @@ class cliente {
 			int posi = 0;
 			int a = 0; // Cuenta el numero de comodines
 			string[] dibCartas = new string[9];
-			foreach (Propiedad po in posiblesComodines) { if (po.nombre != "none") { posicionesSelec[a] = true; a++; string[] proxCarta = dibujarCarta(new Carta(po.nombre, po.precio, tipo.PROPIEDAD, po.letra)); for (int i = 0; i < proxCarta.Length; i++) { dibCartas[i] += proxCarta[i]; } } else { for (int i = 0; i < dibCartas.Length; i++) { dibCartas[i] += string.Empty; } } };
+			foreach (Propiedad po in posiblesComodines) { if (po.nombre != "none") { posicionesSelec[a] = true; string[] proxCarta = dibujarCarta(new Carta(po.nombre, po.precio, tipo.PROPIEDAD, po.letra)); for (int i = 0; i < proxCarta.Length; i++) { dibCartas[i] += proxCarta[i]; } } else { for (int i = 0; i < dibCartas.Length; i++) { dibCartas[i] += string.Empty; } }  a++; };
 			
 			if (a == 1) { for (int i = 0; i < posiblesComodines.Length; i++) { if (posiblesComodines[i].nombre != "none") { propiedades[pos].quitarProp(i); propiedades[pos].addProp(p); colocarComodin(new Carta(posiblesComodines[i].nombre, posiblesComodines[i].precio, tipo.PROPIEDAD, posiblesComodines[i].letra), false); return; } } }
-			// POR AQUI HAY UN ERROR QUE HACE QUE SE QUITE LA PRIMERA CARTA
+			
 			// Dibujar una pantalla para seleccionar el comodin que se tiene que ir
-			dibujarString(dibCartas);
+			bool dispo = false;
+			string selec;
+			int dibVar = 0;
 			while (!elegido) {
+				dispo = posicionesSelec[posi];
+				while (!dispo) { posi++; posi %= propiedades[pos].max; dispo = posicionesSelec[posi];}
 				
+				Console.Clear();
+				selec = string.Empty;
+				dibVar = 0;
+				for (int i = posi; i >= 0; i--) { dibVar += (posicionesSelec[i] ? 0 : 1); }
+				for (int i = 0; i < posi - dibVar; i++) { selec += centrarTexto(string.Empty, 18); }
+				selec += " ╚========" + posi.ToString() + "=" + dibVar.ToString() + "====╝";
+				
+				dibujarString(dibCartas);
+				Console.WriteLine();
+				Console.WriteLine();
+				Console.WriteLine(selec);
+				
+				var tecla = Console.ReadKey().Key;
+				
+				if 		 (tecla == ConsoleKey.RightArrow) { posi++; posi %= propiedades[pos].max; }
+				else if  (tecla == ConsoleKey.LeftArrow)  { posi--; if (posi < 0) { posi = 0; } }
+				else if  (tecla == ConsoleKey.Enter)	  { Console.WriteLine(posiblesComodines[posi].nombre); propiedades[pos].quitarProp(posi); propiedades[pos].addProp(p); colocarComodin(new Carta(posiblesComodines[posi].nombre, posiblesComodines[posi].precio, tipo.PROPIEDAD, posiblesComodines[posi].letra), false); elegido = true; }
 			}
 		} else { propiedades[pos].addProp(p); }
 	}
@@ -810,7 +831,6 @@ class cliente {
 				
 				clr += letra;
 			}
-
 		}
 	}
 	
@@ -901,7 +921,7 @@ class cliente {
 	}
 	
 	void wildCart(string[] palabras) {  // Se encarga de dibujar los comodines en las cartas en la mano
-		if (palabras[1] == "CARD") { // Cualquier color
+		if (palabras[1] == "GAY") { // Cualquier color
 			dibCarta[2] += "  ";
 			foreach (Set s in sets) {
 				dibCarta[2] += "$" + s.color + "# ";

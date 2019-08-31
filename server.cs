@@ -40,7 +40,7 @@ class server {
 	// REVISAR PRECIOS
 	// COMODINES MEDIOS
 	
-	private string wldTt =  "COMODIN CARD";             // 2
+	private string wldTt =  "COMODIN GAY";             // 2
 	private string mdMAC =  "COMODIN MARRON AZULCLARO"; // 1 
 	private string mdNam =  "COMODIN NARANJA MORADO";   // 2
 	private string mdAmR =  "COMODIN AMARILLO ROJO";    // 2
@@ -395,7 +395,7 @@ class server {
 					temp += ";" + c;
 				}
 				//return "PEDIR;" + mensaje[1] + temp;
-				return "PEDIR;5;CASA RO;COMODIN CARD;COMODIN VERDE AZULOSCURO;KEBAB;MESA CUADRADA"; // QUITAR, SOLO DEBUG
+				return "PEDIR;5;CASA RO;COMODIN GAY;COMODIN VERDE AZULOSCURO;URBA MARIO;MESA CUADRADA"; // QUITAR, SOLO DEBUG
 			default:
 				Console.WriteLine("ERROR: El mensaje: " + _msg + " no puede ser reconocido");
 				return "NOEXITO";

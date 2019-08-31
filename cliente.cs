@@ -258,15 +258,8 @@ class cliente {
 			currentProps--;
 		}
 	
-		public string construir(construcciones _cons) { // Solo toma como parametro una casa o un hotel
-			switch (cons) {
-				case construcciones.NADA:
-					cons = _cons;
-					return "Exito, " + _cons.ToString() + " construido";
-				default:
-					return "Imposible construir";
-			}
-		}
+		public void construir(string _cons) { // Solo toma como parametro una casa o un hotel
+			if (cons == construcciones.NADA) { cons = ((_cons == "CASA") ? construcciones.CASA : construcciones.HOTEL); } }
 		
 		public void actualizarColor(string c) { color = c; }
 		public void actualizarLetra(bool l)   { letra = l; }
@@ -359,7 +352,7 @@ class cliente {
 				Console.WriteLine("Unido a la partida con la id " + id.ToString() + ". Esperando que empiece...");
 			break;
 			case "ESTADO":
-				if (txtHost != mensaje[2] && mensaje[1] != "ESPERANDO")				   { txtHost      = mensaje[2];           dibujarPantalla(); }
+				if (txtHost[8] != mensaje[2] && mensaje[1] != "ESPERANDO")			    { anadirMensajeChat(mensaje[2]);       dibujarPantalla(); }
 				if (cartaMedio.texto != mensaje[3] && mensaje[1] != "ESPERANDO")        { cartaMedio   = getCarta(mensaje[3]); dibujarPantalla(); }
 			
 				if (estadoActual.ToString() != mensaje[1]) { estadoActual = getEstado(mensaje[1]); accionEstado(); } // Ultimo porque accionEstado podria bloquear
@@ -375,6 +368,11 @@ class cliente {
 				Console.WriteLine("WTF? How.......");
 			break;
 		}
+	}
+	
+	void anadirMensajeChat(string msg) {
+		for (int i = 7; i > 0; i--) { txtHost[i] = txtHost[i - 1]; }
+		txtHost[8] = msg;
 	}
 	
 	void iniciarCliente() {
@@ -442,7 +440,7 @@ class cliente {
 			Console.WriteLine("Nombre invalido, tiene que tener maximo 10 letras, no contener ni espacios ni ;");
 			Console.Clear();
 		}
-		enviarMensaje(prepararMensaje(new string[2] { "UNIRSE", nametag }));
+		enviarMensaje(prepararMensaje(new string[3] { "UNIRSE", nametag, string.Empty }));
 		
 
 		while (true) {
@@ -543,6 +541,7 @@ class cliente {
 					quitarCarta(cartaSelect);
 					dibujarPantalla();
 				}
+				//cartas_jugadas++; //QUITAR, SOLO DEBUG
 			break;
 			case tipo.DINERO:
 				addBillete(c.precio);
@@ -556,14 +555,52 @@ class cliente {
 				Console.WriteLine(c.texto);
 			break;
 			case tipo.CONSTRUCCION:
-				Console.WriteLine("CONSTRUCCION");
+				int setsCompls = 0;
+				foreach (Set s in propiedades) { if (s.completo && s.cons == construcciones.NADA) { setsCompls++; } }
+				Console.WriteLine(setsCompls);
+				if (setsCompls == 0) { Console.Beep(); Console.Clear(); Console.WriteLine("NO TIENES SETS COMPLETOS DISPONIBLES"); dibujarPantalla(); break;}
+				
+				int[] posibles = new int[setsCompls];
+				int a = 0;
+				for (int i = 0; i < propiedades.Length; i++) { if (propiedades[i].completo && propiedades[i].cons == construcciones.NADA) { posibles[a] = i; a++; } }
+				
+				// Dibujar Pantalla
+				bool elegido = false;
+				string[] setss = dibujarSet(propiedades[posibles[0]], false);
+				for (int i = 1; i < posibles.Length; i++) { string[] prox = dibujarSet(propiedades[posibles[i]], false); for (int j = 0; j < prox.Length; j++) { setss[j] += prox[j]; } }
+				
+				if (setsCompls == 1) { propiedades[posibles[0]].construir(c.texto); quitarCarta(cartaSelect); Console.Clear(); dibujarPantalla(); break; }
+				
+				int pos = 0;
+				string sel;
+				while (!elegido) {
+					Console.Clear();
+					dibujarString(setss);
+					
+					sel = string.Empty;
+					for (int i = 0; i < pos; i++) { sel += centrarTexto(string.Empty, 18); }
+					sel += " ╚===============╝";
+					
+					Console.WriteLine();
+					Console.WriteLine(sel);
+					
+					var tecla = Console.ReadKey().Key;
+					if      (tecla == ConsoleKey.RightArrow) { pos++; pos %= a; }
+					else if (tecla == ConsoleKey.LeftArrow)  { pos--; if (pos < 0) { pos = 0; } }
+					else if (tecla == ConsoleKey.Enter)      { propiedades[posibles[pos]].construir(c.texto); elegido = true; }
+				}
+				quitarCarta(cartaSelect);
+				dibujarPantalla();
+				cartas_jugadas++;
 			break;
 			case tipo.RENTA:
 				Console.WriteLine("RENTA");
+				
+				
 			break;
 		}
 		
-		if (cartas_jugadas == 3) { turno = false; Console.WriteLine("Fin"); }
+		if (cartas_jugadas == 3) { Console.Beep(); turno = false; Console.WriteLine("Fin"); }
 	}
 	
 	void colocarComodin(Carta c, bool quitar = true) {
@@ -612,7 +649,7 @@ class cliente {
 			for (int i = 0; i < colors.Length; i++) { foreach (Set a in propiedades) { if (colors[i] == a.color) { ss[i] = a; disponibilidad[i] = 1; if (a.completo) { disponibilidad[i] = 2; }; break; } } }
 			
 			int pos = 0;
-			string[] dibSets = new string[16];
+			string[] dibSets = new string[18];
 			string mens = string.Empty;
 			foreach (Set s in ss) { string[] proxSet = dibujarSet(s, false); for (int i = 0; i < proxSet.Length; i++) { dibSets[i] += proxSet[i]; } }
 			
@@ -629,7 +666,7 @@ class cliente {
 				// Teclas
 				var tecla = Console.ReadKey().Key;
 				if      (tecla == ConsoleKey.RightArrow) { pos++; pos %= disponibilidad.Length; }
-				else if (tecla == ConsoleKey.LeftArrow)  { pos--; pos %= disponibilidad.Length; }
+				else if (tecla == ConsoleKey.LeftArrow)  { pos--; if (pos < 0) { pos = 0; } }
 				else if (tecla == ConsoleKey.Enter)      { 
 					switch (disponibilidad[pos]) {
 						case 0:
@@ -728,13 +765,13 @@ class cliente {
 	int     selectPs = 0; // Posicion del select: 0 -> propiedades, 1 -> cartas, 2 -> botones
 	int maxDesplazab = 0; // Maximo que se puede desplazar;
 	
-	string[] dibProps = new string[16];
+	string[] dibProps = new string[18];
 	string[] dibBarja = new string[9];
 	string   dibSelec = string.Empty;
 	
 	Carta    cartaMedio = new Carta("QUE EMPIECE LA PARTIDA", 10, tipo.ACCION);
 	string[] cartaMd = new string[9];
-	string   txtHost = " Testing 101";
+	string[] txtHost = new string[9];
 	
 	string[] botones     = new string[3] { " ################# ################# #################", " #   VER DINERO  # #  VER ENEMIGOS # #  PASAR TURNO  #", " ################# ################# #################" };
 	
@@ -781,13 +818,14 @@ class cliente {
 		Console.WriteLine();
 		
 		Console.WriteLine();
-		Console.WriteLine(txtHost);
 		Console.WriteLine(" CARTA EN EL MEDIO");
 		
 		
 		Console.WriteLine();
 		
-		dibujarString(dibujarCarta(cartaMedio));
+		cartaMd = dibujarCarta(cartaMedio);
+		for (int i = 0; i < 9; i++) { cartaMd[i] += "   " + txtHost[i]; }
+		dibujarString(cartaMd);
 		
 		Console.WriteLine();
 		if (selectPs == 2) Console.WriteLine(dibSelec);
@@ -975,12 +1013,12 @@ class cliente {
 	
 	string[] dibSet;
 	string[] dibujarSet(Set s, bool pp = true) {
-		dibSet = new string[16]; // el set mas grande posible
+		dibSet = new string[18]; // el set mas grande posible
 		
 		int construc = (s.cons == construcciones.NADA ? 0 : 1); // Devuelve 0 o 1 en funcion de si no hay o si (en ese orden) un edificio (construccion)
 		
 		if (s.cons != construcciones.NADA) { dibSet[0] += " " + getCarta(s.cons.ToString()).precio.ToString(); if (s.cons == construcciones.CASA) { dibSet[1] += " #$VERDE]" + centrarTexto("CASA", 14) + "$BLANCO]"; } else { dibSet[1] += " #$ROJO]" + centrarTexto("HOTEL", 14) + "$BLANCO]"; } } // Dibujar precio casa u hotel
-	
+		
 		for (int i = construc; i < s.currentProps + construc; i++) { dibSet[i*2] += " " + s.prop[0].precio.ToString(); } // Dibujar los precios en los sets
 		
 		for (int i = 0; i < s.currentProps + construc; i++) { dibSet[i*2] += "-#############-"; dibSet[i*2 + 1] += " #"; } // Dibujar los bordes de las cartas de los sets
@@ -1003,7 +1041,7 @@ class cliente {
 		int total = s.precios[s.currentProps - 1];
 		if (s.cons != construcciones.NADA) { dibSet[0] += getCarta(s.cons.ToString()).precio.ToString(); total += getCarta(s.cons.ToString()).precio; }
 		
-		if (pp) { dibSet[15] += " " + centrarTexto(total.ToString(), 17); } else { dibSet[15] += " " + centrarTexto(string.Empty, 17); }
+		if (pp) { dibSet[17] += " " + centrarTexto(total.ToString(), 17); } else { dibSet[15] += " " + centrarTexto(string.Empty, 18); }
 		
 		for (int i = min + s.precios.Length; i < min + 7; i++) { dibSet[i] += centrarTexto(string.Empty, 15); } // Rellenar el resto de la carta
 		for (int i = min; i < min + 7; i++) 				   { dibSet[i] += "#"; } // Borde exterior

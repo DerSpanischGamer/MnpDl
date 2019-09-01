@@ -261,6 +261,11 @@ class cliente {
 		public void construir(string _cons) { // Solo toma como parametro una casa o un hotel
 			if (cons == construcciones.NADA) { cons = ((_cons == "CASA") ? construcciones.CASA : construcciones.HOTEL); } }
 		
+		public int getValor() {
+			if (cons == construcciones.NADA) return precios[currentProps - 1];
+			return precios[currentProps - 1] + ((cons == construcciones.CASA) ? 3 : 4);
+		}
+		
 		public void actualizarColor(string c) { color = c; }
 		public void actualizarLetra(bool l)   { letra = l; }
 		
@@ -364,10 +369,29 @@ class cliente {
 			case "NOEXITO":
 				Console.WriteLine("Ha habido un error :/ (NOEXITO)");
 			break;
+			case "PAGAR": // Recibe que el servidor ya ha tomado nota del hecho que se tiene que pagar x cantidad
+				anadirMensajeChat(mensaje[1]);
+				cartaMedio = getCarta(mensaje[2]);
+				
+				bool todos = false;
+				while (!todos) {
+					// Preguntar al servidor por las cartas que se han recibido y si ya se puede continuar
+				}
+			break;
+			case "DEBES":
+			
+				deberDinero();
+			break;
+			case "NOOP": // NO OPERATION, no hace nada
+			break;
 			default:
 				Console.WriteLine("WTF? How.......");
 			break;
 		}
+	}
+	
+	void deberDinero(int cantidad) { 
+	
 	}
 	
 	void anadirMensajeChat(string msg) {
@@ -595,12 +619,44 @@ class cliente {
 			break;
 			case tipo.RENTA:
 				Console.WriteLine("RENTA");
-				
-				
+				if (c.texto.Contains("CUALQUIER")) { // Aqui es en el caso en el que el comodin sea de cualquier color
+					int[] colors = new int[setsDisponibls];
+					int b = 0;
+					for (int i = 0; i < propiedades.Length; i++) { if (propiedades[i].color != "none") { colors[b] = i; b++; } }
+					
+					if (b == 0) { enviarMensaje(prepararMensaje(new string[4] { "PAGAR", id.ToString(), propiedades[posi].getValor().ToString(), string.Empty })); break; }
+					
+					string[] selecClrs = new string[4] { " #", " #", " #", string.Empty };
+					foreach (int co in colors) { selecClrs[0] += "#######"; selecClrs[2] += "#######"; selecClrs[1] += "$" + propiedades[co].color + "#" + centrarTexto(propiedades[co].getValor().ToString(), 6) + "$NEGRO##"; }
+					int posi = 0;
+					bool elegid = false;
+					string selecc;
+					
+					while (!elegid) {
+						Console.Clear();
+						dibujarString(selecClrs);
+						
+						selecc = string.Empty;
+						for (int i = 0; i < posi; i++) { selecc += centrarTexto(string.Empty, 7); }
+						selecc += " ╚======╝";
+						
+						Console.WriteLine();
+						Console.WriteLine(selecc);
+						
+						var tecla = Console.ReadKey().Key;
+						
+						if 		(tecla == ConsoleKey.RightArrow) { posi++; posi %= setsDisponibls; }
+						else if (tecla == ConsoleKey.LeftArrow)  { posi--; if (posi < 0) { posi = 0; } }
+						else if (tecla == ConsoleKey.Enter)      { enviarMensaje(prepararMensaje(new string[4] { "PAGAR", id.ToString(), propiedades[posi].getValor().ToString(), string.Empty })); elegid = true; }
+					}
+					cartas_jugadas++;
+					break;
+				}
+				// Aqui son las rentas entre dos colores
 			break;
 		}
 		
-		if (cartas_jugadas == 3) { Console.Beep(); turno = false; Console.WriteLine("Fin"); }
+		if (cartas_jugadas == 3) { turno = false; Console.WriteLine("Fin"); }
 	}
 	
 	void colocarComodin(Carta c, bool quitar = true) {
@@ -1038,10 +1094,9 @@ class cliente {
 		dibSet[min + 7] += " " + s.prop[0].precio.ToString() + "-#############-" + s.prop[0].precio.ToString(); // linea con precio al final de la carta
 		
 		// Calcular el precio de lo que costaria la renta en este set + dibujar precio del edificio
-		int total = s.precios[s.currentProps - 1];
-		if (s.cons != construcciones.NADA) { dibSet[0] += getCarta(s.cons.ToString()).precio.ToString(); total += getCarta(s.cons.ToString()).precio; }
+		if (s.cons != construcciones.NADA) { dibSet[0] += getCarta(s.cons.ToString()).precio.ToString(); }
 		
-		if (pp) { dibSet[17] += " " + centrarTexto(total.ToString(), 17); } else { dibSet[15] += " " + centrarTexto(string.Empty, 18); }
+		if (pp) { dibSet[17] += " " + centrarTexto("Valor: " + s.getValor().ToString(), 17); } else { dibSet[15] += " " + centrarTexto(string.Empty, 18); }
 		
 		for (int i = min + s.precios.Length; i < min + 7; i++) { dibSet[i] += centrarTexto(string.Empty, 15); } // Rellenar el resto de la carta
 		for (int i = min; i < min + 7; i++) 				   { dibSet[i] += "#"; } // Borde exterior

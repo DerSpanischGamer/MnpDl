@@ -249,7 +249,7 @@ class server {
 	bool activo = true;
 	bool jugando = false;
 	
-	public enum estado { ESPERANDO, STANDBY, TURNO };
+	public enum estado { ESPERANDO, STANDBY, TURNO, DEBIENDO };
 	
 	string medio 	   = "QUE EMPIECE LA PARTIDA";
 	volatile string mensajeHost = "idk";
@@ -371,6 +371,9 @@ class server {
 		return mensaje;
 	}
 	
+	int debenDinero;
+	int cantidad;
+	
 	string signalDcder(string _msg) {
 		string[] mensaje = new string[numeroPuntosComas(_msg)];
 		mensaje = tratarMensaje(_msg, mensaje.Length);
@@ -379,14 +382,20 @@ class server {
 		
 		switch (mensaje[0]) {
 			case "UNIRSE":
+				// ESTRUCTURA: UNIRSE ; NOMBRE
 				if (addJugador(mensaje[1])) return  "UNIDO;" + (idCnt - 1).ToString();
 				else return "NOEXITO";
 			case "ESTADO":
-				return "ESTADO;" + getJugadorById(int.Parse(mensaje[1])).estadoJugador.ToString() + ";" + mensajeHost + ";" + medio;
+				// ESTRUCTURA: ESTADO ; ID
+				if (getJugadorById(int.Parse(mensaje[1])).estadoJugador == estado.DEBIENDO) return "DEBES;" + cantidad.ToString() ";";
+				return "ESTADO;" + getJugadorById(int.Parse(mensaje[1])).estadoJugador.ToString() + ";" + mensajeHost + ";" + medio + ";";
 			case "FINTURNO":
+				// ESTRUCTURA: FINTURNO ; ID
 				mensajeHost = "[" + getJugadorById(int.Parse(mensaje[1])).nombre + "]" + " Ha acabado su turno";
-				return "ESTADO;" + getJugadorById(int.Parse(mensaje[1])).estadoJugador.ToString() + ";" + mensajeHost + ";" + medio;
+				// ACCION PARA QUE EL SIGUIENTE JUEGUE
+				return "ESTADO;" + getJugadorById(int.Parse(mensaje[1])).estadoJugador.ToString() + ";" + mensajeHost + ";" + medio + ";";
 			case "PEDIR":
+				// ESTRUCTURA: PEDIR ; Nº_CARTAS
 				string temp = string.Empty;
 				
 				for (int i = 0; i < int.Parse(mensaje[1]); i++) {
@@ -395,9 +404,26 @@ class server {
 					temp += ";" + c;
 				}
 				//return "PEDIR;" + mensaje[1] + temp;
-				return "PEDIR;5;PARQUE LA PAZ;PQE LOS PATOS;KEBAB;MESA CUADRADA;HOTEL"; // QUITAR, SOLO DEBUG
+				return "PEDIR;5;PARQUE LA PAZ;PQE LOS PATOS;KEBAB;MESA CUADRADA;CUALQUIER COLOR"; // QUITAR, SOLO DEBUG
+			
+			// Estos casos se ocupan del dinero
+			case "PAGAR": // Pone el servidor en modo esperar pagos
+				// ESTRUCTURA: PAGAR ; ID ; CANTIDAD ; CARTA
+				debenDinero = jugadorNum - 1;
+				
+				cantidad = int.Parse(mensaje[2]);
+				mensajeHost = "[" + getJugadorById(mensaje[1]).nombre + "] Hay que pagarle " + cantidad.ToString();
+				medio = mensaje[3];
+				return "PAGAR;" + mensajeHost + ";" + medio + ";";
+			case "PAGOS":
+			break;
+			case "PAGADO": // Indica al servidor que la persona id ID ya ha pagado
+				// ESTRUCTURA: PAGADO ; ID ; [ BILLETES o PROPIEDADES ]
+				debenDinero--;
+				if (debenDinero == 0) { mensajeHost = "[Server] Todos han pagado"; }
+				return "NOOP;PAGADO"
 			default:
-				Console.WriteLine("ERROR: El mensaje: " + _msg + " no puede ser reconocido");
+				Console.WriteLine("ERROR: El mensaje: " + _msg + " no puede ser reconocido" + ";");
 				return "NOEXITO";
 		}
 	}
